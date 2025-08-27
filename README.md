@@ -58,10 +58,10 @@ Streamlines the process of planning meals and generating grocery lists by:
 ## Development Slices
 
 ### Slice 1: Recipe Management + Ephemeral Planning ✅ CURRENT
-- [ ] Project setup (NextJS + Prisma + Mantine)
-- [ ] Database foundation (Item, Recipe, RecipeItem tables)
-- [ ] Basic Recipe CRUD operations
-- [ ] Item autocomplete component
+- [x] Project setup (NextJS + Prisma + Mantine)
+- [x] Database foundation (Item, Recipe, RecipeItem tables)
+- [x] Basic Recipe CRUD operations
+- [x] Item autocomplete component
 - [ ] In-memory meal planning interface (14 days)
 - [ ] Shopping list generation with ingredient counts
 
