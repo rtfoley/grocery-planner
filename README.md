@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Grocery Planner
 
-## Getting Started
+A family meal planning and grocery list generation tool for local network deployment.
 
-First, run the development server:
+## Overview
 
+Streamlines the process of planning meals and generating grocery lists by:
+- Storing recipes with ingredients and amounts
+- Planning meals for 1-2 weeks on specific dates
+- Automatically generating shopping lists with ingredient counts
+- Managing staple items and store ordering preferences
+
+## Tech Stack
+
+- **Framework:** NextJS (App Router) with TypeScript (strict mode)
+- **UI:** Mantine component library
+- **Database:** SQLite with Prisma ORM
+- **Deployment:** Raspberry Pi with PM2 process management
+- **Development:** Local machine → build → deploy to Pi
+
+## Architecture Decisions
+
+- **Data Operations:** Server actions (no API routes)
+- **State Management:** React state (page-specific)
+- **Forms:** Mantine form system
+- **Database Location:** `./data/app.db` (project root)
+- **Schema Management:** Prisma migrations
+
+## Data Model
+
+### Core Entities
+- **Item:** Grocery items with optional staple status and store ordering
+- **Recipe:** Named collections of ingredients with amounts
+- **PlanningSession:** 14-day meal planning periods with start date
+- **MealAssignment:** Links specific recipes to specific dates
+- **StapleSelection:** Per-session staple item selections (pending/included/excluded)
+- **AdHocItem:** User-added items not from recipes or staples
+- **ItemExclusion:** Items to exclude from shopping list (we have enough at home)
+
+## Application Structure
+
+### Pages
+- `/` - Home (meal planning + live shopping list)
+- `/recipes` - Recipe management (CRUD)
+- `/recipes/new` - Add new recipe
+- `/recipes/[id]` - Edit existing recipe
+- `/store-order` - Drag-and-drop item ordering for shopping route
+- `/staples` - Master staples list management
+
+### Key Features
+- **Live Shopping List:** Updates automatically as meals are planned
+- **Item Autocomplete:** Smart ingredient entry with create-new capability
+- **Flexible Planning:** 14 consecutive days starting from chosen date
+- **Amount Concatenation:** "flour: 1 cup, 2 tbsp (+ 1 other recipe)"
+- **Store Ordering:** Custom item sequence matching shopping route
+- **Responsive Design:** Works on phones, tablets, and desktop
+
+## Development Slices
+
+### Slice 1: Recipe Management + Ephemeral Planning ✅ CURRENT
+- [ ] Project setup (NextJS + Prisma + Mantine)
+- [ ] Database foundation (Item, Recipe, RecipeItem tables)
+- [ ] Basic Recipe CRUD operations
+- [ ] Item autocomplete component
+- [ ] In-memory meal planning interface (14 days)
+- [ ] Shopping list generation with ingredient counts
+
+### Slice 1.5: Item Exclusions
+- [ ] In-memory item exclusions ("we have flour at home")
+- [ ] Shopping list checkboxes to exclude items
+- [ ] Excluded items UI treatment
+
+### Slice 2: Ad-hoc Items
+- [ ] In-memory ad-hoc item additions to shopping list
+- [ ] Unified shopping list display (recipes + ad-hoc items)
+
+### Slice 3: Staples System
+- [ ] Add staple fields to Item table
+- [ ] StapleSelection table and management
+- [ ] Master staples list interface (`/staples`)
+- [ ] In-memory staples selection for shopping lists
+- [ ] Three-state staples workflow (pending/included/excluded)
+
+### Slice 4: Store Ordering
+- [ ] Add store_order_index to Item table
+- [ ] Store ordering interface (`/store-order`)
+- [ ] Drag-and-drop item reordering
+- [ ] Shopping list display in custom store order
+- [ ] Warning for unpositioned items
+
+### Slice 5: Full Persistence
+- [ ] Add PlanningSession, MealAssignment, AdHocItem tables
+- [ ] Convert all in-memory state to persistent storage
+- [ ] Session history and management
+- [ ] Pi deployment setup
+- [ ] PM2 process management configuration
+
+## Installation & Development
+
+### Prerequisites
+- Node.js 18+
+- npm or yarn
+
+### Local Development Setup
 ```bash
+# Clone and install dependencies
+npm install
+
+# Set up database
+npx prisma generate
+npx prisma migrate dev
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Pi Deployment
+```bash
+# Build application
+npm run build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+# Deploy to Pi (replace with your Pi details)
+rsync -av ./ pi@raspberrypi:/home/pi/grocery-planner/
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# On Pi: install and start with PM2
+pm2 start npm --name "grocery-planner" -- start
+pm2 save
+```
 
-## Learn More
+## Database Schema
 
-To learn more about Next.js, take a look at the following resources:
+See `prisma/schema.prisma` for the complete data model. Key relationships:
+- Recipe → RecipeItem → Item (many-to-many through junction table)
+- PlanningSession → MealAssignment → Recipe (meal planning)
+- PlanningSession → StapleSelection → Item (staples per session)
+- Item has optional staple status and store ordering
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Usage Workflow
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. **Add Recipes:** Enter recipe names and ingredients with optional amounts
+2. **Plan Meals:** Select start date, assign recipes to specific days (14-day span)
+3. **Review Shopping List:** Auto-generated list shows ingredient counts and amounts
+4. **Manage Staples:** Configure standard items to check each shopping trip
+5. **Order Items:** Arrange items to match your typical store shopping route
+6. **Exclude Items:** Skip items you already have at home
 
-## Deploy on Vercel
+## Design Philosophy
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Functionality over aesthetics:** Focus on workflow efficiency
+- **Local network only:** No authentication, optimized for family use
+- **Progressive enhancement:** Build complexity incrementally
+- **Mobile-responsive:** Usable on phones during planning
+- **Print-friendly:** Shopping lists work on paper backup
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Future Enhancements (Post-MVP)
+
+- Recipe import/export
+- Nutritional information tracking
+- Shopping history analysis
+- Multi-store support
+- Recipe scaling/serving adjustments
+- Meal plan templates
+- Calendar integration
