@@ -14,6 +14,7 @@
     "@mantine/hooks": "^8.2.7",
     "@mantine/notifications": "^8.2.7",
     "@prisma/client": "^6.14.0",
+    "@tabler/icons-react": "^3.34.1",
     "next": "15.5.0",
     "react": "19.1.0",
     "react-dom": "19.1.0"

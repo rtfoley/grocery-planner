@@ -1,12 +1,43 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
   url      = env("DATABASE_URL")
+}
+
+model Item {
+  id                Int      @id @default(autoincrement())
+  name              String   @unique
+  is_staple         Boolean  @default(false)
+  staple_amount     String?
+  store_order_index Int?
+  
+  recipe_items      RecipeItem[]
+  
+  @@map("items")
+}
+
+model Recipe {
+  id    Int    @id @default(autoincrement())
+  name  String
+  
+  recipe_items     RecipeItem[]
+  
+  @@map("recipes")
+}
+
+model RecipeItem {
+  recipe_id Int
+  item_id   Int
+  amount    String?
+  
+  recipe Recipe @relation(fields: [recipe_id], references: [id], onDelete: Cascade)
+  item   Item   @relation(fields: [item_id], references: [id], onDelete: Restrict)
+  
+  @@id([recipe_id, item_id])
+  @@map("recipe_items")
 }
