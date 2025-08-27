@@ -19,6 +19,9 @@ export function Navigation() {
             <Button component={Link} href="/recipes" variant="subtle">
               Recipes
             </Button>
+            <Button component={Link} href="/items" variant="subtle">
+              Items
+            </Button>
           </Group>
           
           <ActionIcon

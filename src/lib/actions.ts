@@ -1,17 +1,22 @@
-// src/lib/actions.ts
 'use server'
 
 import { prisma } from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 
 // Item actions
-export async function createItem(name: string) {
+export async function createItem(name: string, is_staple: boolean = false, staple_amount?: string) {
   const normalizedName = name.toLowerCase().trim()
   
   try {
     const item = await prisma.item.create({
-      data: { name: normalizedName }
+      data: { 
+        name: normalizedName,
+        is_staple,
+        staple_amount: is_staple ? staple_amount || null : null
+      }
     })
+    
+    revalidatePath('/items')
     return { success: true, item }
   } catch (error) {
     return { success: false, error: 'Item already exists or invalid name' }
@@ -22,6 +27,23 @@ export async function getItems() {
   return await prisma.item.findMany({
     orderBy: { name: 'asc' }
   })
+}
+
+export async function updateItemStapleStatus(id: number, is_staple: boolean, staple_amount?: string) {
+  try {
+    const item = await prisma.item.update({
+      where: { id },
+      data: { 
+        is_staple,
+        staple_amount: is_staple ? staple_amount || null : null
+      }
+    })
+    
+    revalidatePath('/items')
+    return { success: true, item }
+  } catch (error) {
+    return { success: false, error: 'Failed to update staple status' }
+  }
 }
 
 // Recipe actions
