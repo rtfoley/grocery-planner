@@ -15,6 +15,7 @@ interface MealPlannerProps {
 export function MealPlanner({ recipes }: MealPlannerProps) {
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [mealAssignments, setMealAssignments] = useState<MealAssignment[]>([])
+  const [excludedItems, setExcludedItems] = useState<Set<string>>(new Set())
 
   // Generate 14 consecutive days from start date
   const planningDays = useMemo(() => {
@@ -56,6 +57,19 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
   const startNewSession = () => {
     setStartDate(new Date())
     setMealAssignments([])
+    setExcludedItems(new Set())
+  }
+
+  const toggleItemExclusion = (itemName: string) => {
+    setExcludedItems(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(itemName)) {
+        newSet.delete(itemName)
+      } else {
+        newSet.add(itemName)
+      }
+      return newSet
+    })
   }
 
   // Get selected recipes for shopping list
@@ -91,7 +105,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
             placeholder="Pick start date"
             valueFormat="MMM D, YYYY"
           />
-          <Button variant="light" onClick={startNewSession}>
+          <Button variant="light" onClick={startNewSession} style={{ marginBottom: 2 }}>
             New Session
           </Button>
         </Group>
@@ -129,7 +143,11 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, lg: 4 }}>
-          <ShoppingList recipes={selectedRecipes} />
+          <ShoppingList 
+            recipes={selectedRecipes} 
+            excludedItems={excludedItems}
+            onToggleExclusion={toggleItemExclusion}
+          />
         </Grid.Col>
       </Grid>
     </Stack>

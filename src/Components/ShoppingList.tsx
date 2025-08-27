@@ -2,11 +2,13 @@
 'use client'
 
 import { useMemo } from 'react'
-import { Card, Title, Text, Stack } from '@mantine/core'
+import { Card, Title, Text, Stack, Checkbox, Group } from '@mantine/core'
 import { Recipe } from '@/lib/types'
 
 interface ShoppingListProps {
   recipes: Recipe[]
+  excludedItems?: Set<string>
+  onToggleExclusion?: (itemName: string) => void
 }
 
 interface ShoppingItem {
@@ -15,7 +17,7 @@ interface ShoppingItem {
   recipeCount: number
 }
 
-export function ShoppingList({ recipes }: ShoppingListProps) {
+export function ShoppingList({ recipes, excludedItems = new Set(), onToggleExclusion }: ShoppingListProps) {
   const shoppingItems = useMemo(() => {
     const itemMap = new Map<string, ShoppingItem>()
 
@@ -57,6 +59,12 @@ export function ShoppingList({ recipes }: ShoppingListProps) {
     return `${item.itemName}: ${amountText} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''})`
   }
 
+  const handleExclusionToggle = (itemName: string) => {
+    if (onToggleExclusion) {
+      onToggleExclusion(itemName)
+    }
+  }
+
   return (
     <Card>
       <Title order={3} mb="md">Shopping List</Title>
@@ -64,11 +72,29 @@ export function ShoppingList({ recipes }: ShoppingListProps) {
         <Text c="dimmed">Select recipes to generate shopping list</Text>
       ) : (
         <Stack gap="xs">
-          {shoppingItems.map(item => (
-            <Text key={item.itemName} size="sm">
-              {formatItem(item)}
-            </Text>
-          ))}
+          {shoppingItems.map(item => {
+            const isExcluded = excludedItems.has(item.itemName)
+            return (
+              <Group key={item.itemName} justify="space-between" align="flex-start">
+                <Text 
+                  size="sm" 
+                  style={{ 
+                    flex: 1,
+                    textDecoration: isExcluded ? 'line-through' : 'none',
+                    opacity: isExcluded ? 0.6 : 1
+                  }}
+                >
+                  {formatItem(item)}
+                </Text>
+                <Checkbox
+                  size="sm"
+                  checked={isExcluded}
+                  onChange={() => handleExclusionToggle(item.itemName)}
+                  aria-label={`Exclude ${item.itemName}`}
+                />
+              </Group>
+            )
+          })}
         </Stack>
       )}
     </Card>
