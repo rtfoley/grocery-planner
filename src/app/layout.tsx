@@ -1,7 +1,9 @@
 // src/app/layout.tsx
 import type { Metadata } from 'next'
 import { ColorSchemeScript, MantineProvider } from '@mantine/core'
+import { DatesProvider } from '@mantine/dates'
 import '@mantine/core/styles.css'
+import '@mantine/dates/styles.css'
 import { Navigation } from '@/Components/Navigation'
 
 export const metadata: Metadata = {
@@ -21,8 +23,10 @@ export default function RootLayout({
       </head>
       <body>
         <MantineProvider defaultColorScheme="auto">
-          <Navigation />
-          {children}
+          <DatesProvider settings={{ firstDayOfWeek: 0 }}>
+            <Navigation />
+            {children}
+          </DatesProvider>
         </MantineProvider>
       </body>
     </html>

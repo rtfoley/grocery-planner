@@ -1,0 +1,137 @@
+// src/components/MealPlanner.tsx
+'use client'
+
+import { useState, useMemo } from 'react'
+import { Title, Group, Button, Select, Grid, Card, Text, Stack } from '@mantine/core'
+import { DatePickerInput } from '@mantine/dates'
+import { IconCalendar } from '@tabler/icons-react'
+import { Recipe, MealAssignment } from '@/lib/types'
+import { ShoppingList } from './ShoppingList'
+
+interface MealPlannerProps {
+  recipes: Recipe[]
+}
+
+export function MealPlanner({ recipes }: MealPlannerProps) {
+  const [startDate, setStartDate] = useState<Date | null>(new Date())
+  const [mealAssignments, setMealAssignments] = useState<MealAssignment[]>([])
+
+  // Generate 14 consecutive days from start date
+  const planningDays = useMemo(() => {
+    if (!startDate) return []
+    
+    return Array.from({ length: 14 }, (_, index) => {
+      const date = new Date(startDate)
+      date.setDate(date.getDate() + index)
+      return date
+    })
+  }, [startDate])
+
+  // Initialize meal assignments when start date changes
+  useMemo(() => {
+    if (planningDays.length > 0) {
+      setMealAssignments(planningDays.map(date => ({ date, recipeId: null })))
+    }
+  }, [planningDays])
+
+  // Recipe options for select dropdown
+  const recipeOptions = [
+    { value: '', label: 'Select recipe...' },
+    ...recipes.map(recipe => ({
+      value: recipe.id.toString(),
+      label: recipe.name.length > 40 ? `${recipe.name.substring(0, 37)}...` : recipe.name
+    }))
+  ]
+
+  const handleRecipeChange = (dateIndex: number, recipeId: string) => {
+    setMealAssignments(prev => 
+      prev.map((assignment, index) => 
+        index === dateIndex 
+          ? { ...assignment, recipeId: recipeId ? parseInt(recipeId) : null }
+          : assignment
+      )
+    )
+  }
+
+  const startNewSession = () => {
+    setStartDate(new Date())
+    setMealAssignments([])
+  }
+
+  // Get selected recipes for shopping list
+  const selectedRecipes = mealAssignments
+    .filter(assignment => assignment.recipeId)
+    .map(assignment => recipes.find(r => r.id === assignment.recipeId)!)
+    .filter(Boolean)
+
+  return (
+    <Stack gap="xl">
+      <Group justify="space-between" align="flex-end">
+        <div>
+          <Title order={1}>Meal Planning</Title>
+          {startDate && (
+            <Text c="dimmed">
+              {startDate.toLocaleDateString('en-US', { 
+                month: 'long', 
+                day: 'numeric' 
+              })} - {planningDays[13]?.toLocaleDateString('en-US', { 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </Text>
+          )}
+        </div>
+        <Group align="flex-end">
+          <DatePickerInput
+            label="Start Date"
+            value={startDate}
+            onChange={setStartDate}
+            leftSection={<IconCalendar size={16} />}
+            clearable={false}
+            placeholder="Pick start date"
+            valueFormat="MMM D, YYYY"
+          />
+          <Button variant="light" onClick={startNewSession}>
+            New Session
+          </Button>
+        </Group>
+      </Group>
+
+      <Grid>
+        <Grid.Col span={{ base: 12, lg: 8 }}>
+          <Card>
+            <Title order={3} mb="md">Planning Session</Title>
+            <Stack gap="sm">
+              {planningDays.map((date, index) => {
+                const assignment = mealAssignments[index]
+                return (
+                  <Group key={index} justify="space-between">
+                    <Text w={100}>
+                      {date.toLocaleDateString('en-US', { 
+                        weekday: 'short',
+                        month: 'numeric',
+                        day: 'numeric'
+                      })}
+                    </Text>
+                    <Select
+                      placeholder="Select recipe..."
+                      data={recipeOptions}
+                      value={assignment?.recipeId?.toString() || ''}
+                      onChange={(value) => handleRecipeChange(index, value || '')}
+                      style={{ flex: 1 }}
+                      clearable
+                    />
+                  </Group>
+                )
+              })}
+            </Stack>
+          </Card>
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, lg: 4 }}>
+          <ShoppingList recipes={selectedRecipes} />
+        </Grid.Col>
+      </Grid>
+    </Stack>
+  )
+}
