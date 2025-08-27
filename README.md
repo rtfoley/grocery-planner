@@ -95,6 +95,9 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [ ] Pi deployment setup
 - [ ] PM2 process management configuration
 
+### Misc
+- [ ] Deleting recipes
+
 ## Installation & Development
 
 ### Prerequisites
