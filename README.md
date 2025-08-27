@@ -66,13 +66,13 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [ ] Shopping list generation with ingredient counts
 
 ### Slice 1.5: Item Exclusions
-- [ ] In-memory item exclusions ("we have flour at home")
-- [ ] Shopping list checkboxes to exclude items
-- [ ] Excluded items UI treatment
+- [x] In-memory item exclusions ("we have flour at home")
+- [x] Shopping list checkboxes to exclude items
+- [x] Excluded items UI treatment
 
 ### Slice 2: Ad-hoc Items
-- [ ] In-memory ad-hoc item additions to shopping list
-- [ ] Unified shopping list display (recipes + ad-hoc items)
+- [x] In-memory ad-hoc item additions to shopping list
+- [x] Unified shopping list display (recipes + ad-hoc items)
 
 ### Slice 3: Staples System
 - [ ] Add staple fields to Item table

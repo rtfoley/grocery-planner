@@ -1,4 +1,4 @@
-// src/components/MealPlanner.tsx
+// src/Components/MealPlanner.tsx
 'use client'
 
 import { useState, useMemo } from 'react'
@@ -13,9 +13,11 @@ interface MealPlannerProps {
 }
 
 export function MealPlanner({ recipes }: MealPlannerProps) {
+  // State management
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [mealAssignments, setMealAssignments] = useState<MealAssignment[]>([])
   const [excludedItems, setExcludedItems] = useState<Set<string>>(new Set())
+  const [adHocItems, setAdHocItems] = useState<Array<{ item: string, amount?: string }>>([])
 
   // Generate 14 consecutive days from start date
   const planningDays = useMemo(() => {
@@ -44,6 +46,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
     }))
   ]
 
+  // Event handlers
   const handleRecipeChange = (dateIndex: number, recipeId: string) => {
     setMealAssignments(prev => 
       prev.map((assignment, index) => 
@@ -58,6 +61,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
     setStartDate(new Date())
     setMealAssignments([])
     setExcludedItems(new Set())
+    setAdHocItems([])
   }
 
   const toggleItemExclusion = (itemName: string) => {
@@ -70,6 +74,14 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
       }
       return newSet
     })
+  }
+
+  const addAdHocItem = (item: string, amount?: string) => {
+    setAdHocItems(prev => [...prev, { item: item.toLowerCase().trim(), amount }])
+  }
+
+  const removeAdHocItem = (index: number) => {
+    setAdHocItems(prev => prev.filter((_, i) => i !== index))
   }
 
   // Get selected recipes for shopping list
@@ -105,7 +117,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
             placeholder="Pick start date"
             valueFormat="MMM D, YYYY"
           />
-          <Button variant="light" onClick={startNewSession} style={{ marginBottom: 2 }}>
+          <Button variant="light" onClick={startNewSession}>
             New Session
           </Button>
         </Group>
@@ -147,6 +159,9 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
             recipes={selectedRecipes} 
             excludedItems={excludedItems}
             onToggleExclusion={toggleItemExclusion}
+            adHocItems={adHocItems}
+            onAddAdHocItem={addAdHocItem}
+            onRemoveAdHocItem={removeAdHocItem}
           />
         </Grid.Col>
       </Grid>
