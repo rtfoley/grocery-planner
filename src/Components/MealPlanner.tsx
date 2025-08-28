@@ -7,17 +7,20 @@ import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
 import { Recipe, MealAssignment } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
+import { StaplesSelector } from './StaplesSelector'
 
 interface MealPlannerProps {
   recipes: Recipe[]
+  staples: Array<{ id: number, name: string, staple_amount: string | null }>
 }
 
-export function MealPlanner({ recipes }: MealPlannerProps) {
+export function MealPlanner({ recipes, staples }: MealPlannerProps) {
   // State management
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [mealAssignments, setMealAssignments] = useState<MealAssignment[]>([])
   const [excludedItems, setExcludedItems] = useState<Set<string>>(new Set())
   const [adHocItems, setAdHocItems] = useState<Array<{ item: string, amount?: string }>>([])
+  const [stapleSelections, setStapleSelections] = useState<Map<number, 'pending' | 'included' | 'excluded'>>(new Map())
 
   // Generate 14 consecutive days from start date
   const planningDays = useMemo(() => {
@@ -62,6 +65,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
     setMealAssignments([])
     setExcludedItems(new Set())
     setAdHocItems([])
+    setStapleSelections(new Map())
   }
 
   const toggleItemExclusion = (itemName: string) => {
@@ -82,6 +86,14 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
 
   const removeAdHocItem = (index: number) => {
     setAdHocItems(prev => prev.filter((_, i) => i !== index))
+  }
+
+  const handleStapleSelection = (stapleId: number, status: 'pending' | 'included' | 'excluded') => {
+    setStapleSelections(prev => {
+      const newMap = new Map(prev)
+      newMap.set(stapleId, status)
+      return newMap
+    })
   }
 
   // Get selected recipes for shopping list
@@ -124,7 +136,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
       </Group>
 
       <Grid>
-        <Grid.Col span={{ base: 12, lg: 8 }}>
+        <Grid.Col span={{ base: 12, md: 4 }}>
           <Card>
             <Title order={3} mb="md">Planning Session</Title>
             <Stack gap="sm">
@@ -132,7 +144,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
                 const assignment = mealAssignments[index]
                 return (
                   <Group key={index} justify="space-between">
-                    <Text w={100}>
+                    <Text w={80} size="sm">
                       {date.toLocaleDateString('en-US', { 
                         weekday: 'short',
                         month: 'numeric',
@@ -146,6 +158,7 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
                       onChange={(value) => handleRecipeChange(index, value || '')}
                       style={{ flex: 1 }}
                       clearable
+                      size="sm"
                     />
                   </Group>
                 )
@@ -154,7 +167,15 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
           </Card>
         </Grid.Col>
 
-        <Grid.Col span={{ base: 12, lg: 4 }}>
+        <Grid.Col span={{ base: 12, md: 4 }}>
+          <StaplesSelector
+            staples={staples}
+            stapleSelections={stapleSelections}
+            onStapleSelection={handleStapleSelection}
+          />
+        </Grid.Col>
+
+        <Grid.Col span={{ base: 12, md: 4 }}>
           <ShoppingList 
             recipes={selectedRecipes} 
             excludedItems={excludedItems}
@@ -162,6 +183,8 @@ export function MealPlanner({ recipes }: MealPlannerProps) {
             adHocItems={adHocItems}
             onAddAdHocItem={addAdHocItem}
             onRemoveAdHocItem={removeAdHocItem}
+            staples={staples}
+            stapleSelections={stapleSelections}
           />
         </Grid.Col>
       </Grid>

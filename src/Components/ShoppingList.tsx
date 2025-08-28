@@ -11,6 +11,12 @@ interface AdHocItem {
   amount?: string
 }
 
+interface Staple {
+  id: number
+  name: string
+  staple_amount: string | null
+}
+
 interface ShoppingListProps {
   recipes: Recipe[]
   excludedItems?: Set<string>
@@ -18,6 +24,8 @@ interface ShoppingListProps {
   adHocItems?: AdHocItem[]
   onAddAdHocItem?: (item: string, amount?: string) => void
   onRemoveAdHocItem?: (index: number) => void
+  staples?: Staple[]
+  stapleSelections?: Map<number, 'pending' | 'included' | 'excluded'>
 }
 
 interface ShoppingItem {
@@ -25,6 +33,7 @@ interface ShoppingItem {
   amounts: string[]
   recipeCount: number
   isAdHoc?: boolean
+  isStaple?: boolean
 }
 
 export function ShoppingList({ 
@@ -33,7 +42,9 @@ export function ShoppingList({
   onToggleExclusion,
   adHocItems = [],
   onAddAdHocItem,
-  onRemoveAdHocItem 
+  onRemoveAdHocItem,
+  staples = [],
+  stapleSelections = new Map()
 }: ShoppingListProps) {
   // State for adding new ad-hoc items
   const [newItemName, setNewItemName] = useState('')
@@ -66,8 +77,22 @@ export function ShoppingList({
     return Array.from(itemMap.values())
   }, [recipes])
 
-  // Combine recipe items and ad-hoc items for display
+  // Combine recipe items, ad-hoc items, and selected staples for display
   const allItems = useMemo(() => {
+    // Start with recipe items
+    const items = [...recipeShoppingItems]
+
+    // Add selected staples
+    const selectedStaples: ShoppingItem[] = staples
+      .filter(staple => stapleSelections.get(staple.id) === 'included')
+      .map(staple => ({
+        itemName: staple.name,
+        amounts: staple.staple_amount ? [staple.staple_amount] : [],
+        recipeCount: 0, // Indicates this is a staple
+        isStaple: true
+      }))
+    items.push(...selectedStaples)
+
     // Add ad-hoc items
     const adHocDisplayItems: ShoppingItem[] = adHocItems.map(item => ({
       itemName: item.item,
@@ -76,12 +101,16 @@ export function ShoppingList({
       isAdHoc: true
     }))
 
-    return [...recipeShoppingItems, ...adHocDisplayItems]
+    return [...items, ...adHocDisplayItems]
       .sort((a, b) => a.itemName.localeCompare(b.itemName))
-  }, [recipeShoppingItems, adHocItems])
+  }, [recipeShoppingItems, staples, stapleSelections, adHocItems])
 
   // Format item display text
   const formatItem = (item: ShoppingItem) => {
+    if (item.isStaple) {
+      return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName
+    }
+
     if (item.isAdHoc) {
       return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName
     }
