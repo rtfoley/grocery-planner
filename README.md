@@ -82,10 +82,10 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Three-state staples workflow (pending/included/excluded)
 
 ### Slice 4: Store Ordering
-- [ ] Add store_order_index to Item table
-- [ ] Store ordering interface (`/store-order`)
-- [ ] Drag-and-drop item reordering
-- [ ] Shopping list display in custom store order
+- [x] Add store_order_index to Item table
+- [x] Store ordering interface (`/store-order`)
+- [x] Drag-and-drop item reordering
+- [x] Shopping list display in custom store order
 - [ ] Warning for unpositioned items
 
 ### Slice 5: Full Persistence

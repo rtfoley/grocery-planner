@@ -175,7 +175,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
         </Grid.Col>
         <Grid.Col span={{base:12, lg: 6}}>
             <Text fw={500} mb="xs">
-                Unordered Items
+                Unordered Items ({unorderedItems.length})
             </Text>
             {unorderedItems.map(item => (
                 <Card withBorder p="sm" key={item.id}>
