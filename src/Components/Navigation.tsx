@@ -1,4 +1,4 @@
-// src/components/Navigation.tsx
+// src/Components/Navigation.tsx
 'use client'
 
 import { Container, Group, Button, Box, ActionIcon, useMantineColorScheme } from '@mantine/core'
@@ -21,6 +21,9 @@ export function Navigation() {
             </Button>
             <Button component={Link} href="/items" variant="subtle">
               Items
+            </Button>
+            <Button component={Link} href="/store-order" variant="subtle">
+              Store Order
             </Button>
           </Group>
           

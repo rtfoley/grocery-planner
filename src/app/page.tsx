@@ -13,7 +13,11 @@ export default async function HomePage() {
   
   return (
     <Container size="xl" py="xl">
-      <MealPlanner recipes={recipes} staples={staples} />
+      <MealPlanner 
+        recipes={recipes} 
+        staples={staples}
+        allItems={items.map(item => ({ name: item.name, store_order_index: item.store_order_index }))}
+      />
     </Container>
   )
 }

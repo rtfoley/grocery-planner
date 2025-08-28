@@ -46,6 +46,39 @@ export async function updateItemStapleStatus(id: number, is_staple: boolean, sta
   }
 }
 
+// Store ordering actions
+export async function updateItemOrder(itemId: number, orderIndex: number) {
+  try {
+    const item = await prisma.item.update({
+      where: { id: itemId },
+      data: { store_order_index: orderIndex }
+    })
+    
+    revalidatePath('/store-order')
+    return { success: true, item }
+  } catch (error) {
+    return { success: false, error: 'Failed to update item order' }
+  }
+}
+
+export async function updateMultipleItemOrders(updates: Array<{ id: number, orderIndex: number }>) {
+  try {
+    await Promise.all(
+      updates.map(({ id, orderIndex }) =>
+        prisma.item.update({
+          where: { id },
+          data: { store_order_index: orderIndex }
+        })
+      )
+    )
+    
+    revalidatePath('/store-order')
+    return { success: true }
+  } catch (error) {
+    return { success: false, error: 'Failed to update item orders' }
+  }
+}
+
 // Recipe actions
 export async function createRecipe(name: string, ingredients: Array<{ item: string, amount?: string }>) {
   try {

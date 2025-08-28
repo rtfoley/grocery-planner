@@ -2,9 +2,10 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon } from '@mantine/core'
-import { IconPlus, IconTrash } from '@tabler/icons-react'
+import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
+import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { Recipe } from '@/lib/types'
+import Link from 'next/link'
 
 interface AdHocItem {
   item: string
@@ -26,6 +27,7 @@ interface ShoppingListProps {
   onRemoveAdHocItem?: (index: number) => void
   staples?: Staple[]
   stapleSelections?: Map<number, 'pending' | 'included' | 'excluded'>
+  allItems?: Array<{ name: string, store_order_index: number | null }>
 }
 
 interface ShoppingItem {
@@ -34,6 +36,7 @@ interface ShoppingItem {
   recipeCount: number
   isAdHoc?: boolean
   isStaple?: boolean
+  orderIndex?: number | null
 }
 
 export function ShoppingList({ 
@@ -44,11 +47,18 @@ export function ShoppingList({
   onAddAdHocItem,
   onRemoveAdHocItem,
   staples = [],
-  stapleSelections = new Map()
+  stapleSelections = new Map(),
+  allItems = []
 }: ShoppingListProps) {
-  // State for adding new ad-hoc items
+  // State for adding new ad-hoc items and sorting preference
   const [newItemName, setNewItemName] = useState('')
   const [newItemAmount, setNewItemAmount] = useState('')
+  const [sortMode, setSortMode] = useState<'store' | 'alphabetical'>('store')
+
+  // Create lookup map for store ordering
+  const orderLookup = useMemo(() => {
+    return new Map(allItems.map(item => [item.name, item.store_order_index]))
+  }, [allItems])
 
   // Process recipe items into shopping list format
   const recipeShoppingItems = useMemo(() => {
@@ -68,17 +78,18 @@ export function ShoppingList({
           itemMap.set(itemName, {
             itemName,
             amounts: recipeItem.amount ? [recipeItem.amount] : [],
-            recipeCount: 1
+            recipeCount: 1,
+            orderIndex: orderLookup.get(itemName)
           })
         }
       })
     })
 
     return Array.from(itemMap.values())
-  }, [recipes])
+  }, [recipes, orderLookup])
 
   // Combine recipe items, ad-hoc items, and selected staples for display
-  const allItems = useMemo(() => {
+  const allShoppingItems = useMemo(() => {
     // Start with recipe items
     const items = [...recipeShoppingItems]
 
@@ -89,7 +100,8 @@ export function ShoppingList({
         itemName: staple.name,
         amounts: staple.staple_amount ? [staple.staple_amount] : [],
         recipeCount: 0, // Indicates this is a staple
-        isStaple: true
+        isStaple: true,
+        orderIndex: orderLookup.get(staple.name)
       }))
     items.push(...selectedStaples)
 
@@ -98,12 +110,35 @@ export function ShoppingList({
       itemName: item.item,
       amounts: item.amount ? [item.amount] : [],
       recipeCount: 0, // Indicates this is ad-hoc
-      isAdHoc: true
+      isAdHoc: true,
+      orderIndex: orderLookup.get(item.item)
     }))
 
     return [...items, ...adHocDisplayItems]
+  }, [recipeShoppingItems, staples, stapleSelections, adHocItems, orderLookup])
+
+  // Sort items based on selected mode
+  const sortedItems = useMemo(() => {
+    if (sortMode === 'alphabetical') {
+      return [...allShoppingItems].sort((a, b) => a.itemName.localeCompare(b.itemName))
+    }
+
+    // Store order mode
+    const orderedItems = allShoppingItems
+      .filter(item => item.orderIndex !== null && item.orderIndex !== undefined)
+      .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+    
+    const unorderedItems = allShoppingItems
+      .filter(item => item.orderIndex === null || item.orderIndex === undefined)
       .sort((a, b) => a.itemName.localeCompare(b.itemName))
-  }, [recipeShoppingItems, staples, stapleSelections, adHocItems])
+
+    return [...orderedItems, ...unorderedItems]
+  }, [allShoppingItems, sortMode])
+
+  // Check for unpositioned items (only relevant for store order mode)
+  const unpositionedItems = sortedItems.filter(item => 
+    item.orderIndex === null || item.orderIndex === undefined
+  )
 
   // Format item display text
   const formatItem = (item: ShoppingItem) => {
@@ -155,13 +190,41 @@ export function ShoppingList({
 
   return (
     <Card>
-      <Title order={3} mb="md">Shopping List</Title>
+      <Group justify="space-between" align="center" mb="md">
+        <Title order={3}>Shopping List</Title>
+        <SegmentedControl
+          size="xs"
+          value={sortMode}
+          onChange={(value) => setSortMode(value as 'store' | 'alphabetical')}
+          data={[
+            { label: 'Store Order', value: 'store' },
+            { label: 'A-Z', value: 'alphabetical' }
+          ]}
+        />
+      </Group>
       
-      {allItems.length === 0 ? (
+      {/* Warning for unpositioned items (only show in store order mode) */}
+      {sortMode === 'store' && unpositionedItems.length > 0 && (
+        <Alert icon={<IconAlertCircle size={16} />} color="orange" mb="md">
+          <Group justify="space-between" align="flex-start">
+            <div>
+              <Text size="sm" fw={500}>Items need positioning</Text>
+              <Text size="xs">
+                {unpositionedItems.length} item{unpositionedItems.length > 1 ? 's' : ''} don't have store positions yet
+              </Text>
+            </div>
+            <Button size="xs" component={Link} href="/store-order">
+              Set Order
+            </Button>
+          </Group>
+        </Alert>
+      )}
+      
+      {sortedItems.length === 0 ? (
         <Text c="dimmed">Select recipes to generate shopping list</Text>
       ) : (
         <Stack gap="xs">
-          {allItems.map((item, index) => {
+          {sortedItems.map((item, index) => {
             const isExcluded = excludedItems.has(item.itemName)
             const isAdHoc = item.isAdHoc
             

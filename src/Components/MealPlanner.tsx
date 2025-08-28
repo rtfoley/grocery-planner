@@ -12,9 +12,10 @@ import { StaplesSelector } from './StaplesSelector'
 interface MealPlannerProps {
   recipes: Recipe[]
   staples: Array<{ id: number, name: string, staple_amount: string | null }>
+  allItems: Array<{ name: string, store_order_index: number | null }>
 }
 
-export function MealPlanner({ recipes, staples }: MealPlannerProps) {
+export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
   // State management
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [mealAssignments, setMealAssignments] = useState<MealAssignment[]>([])
@@ -185,6 +186,7 @@ export function MealPlanner({ recipes, staples }: MealPlannerProps) {
             onRemoveAdHocItem={removeAdHocItem}
             staples={staples}
             stapleSelections={stapleSelections}
+            allItems={allItems}
           />
         </Grid.Col>
       </Grid>
