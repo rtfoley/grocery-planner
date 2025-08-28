@@ -75,11 +75,11 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Unified shopping list display (recipes + ad-hoc items)
 
 ### Slice 3: Staples System
-- [ ] Add staple fields to Item table
-- [ ] StapleSelection table and management
-- [ ] Master staples list interface (`/staples`)
-- [ ] In-memory staples selection for shopping lists
-- [ ] Three-state staples workflow (pending/included/excluded)
+- [x] Add staple fields to Item table
+- [x] StapleSelection table and management
+- [x] Master staples list interface (`/staples`)
+- [x] In-memory staples selection for shopping lists
+- [x] Three-state staples workflow (pending/included/excluded)
 
 ### Slice 4: Store Ordering
 - [ ] Add store_order_index to Item table
