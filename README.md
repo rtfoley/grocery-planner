@@ -96,7 +96,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [ ] PM2 process management configuration
 
 ### Misc
-- [ ] Deleting recipes
+- [x] Deleting recipes
 
 ## Installation & Development
 
