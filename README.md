@@ -97,6 +97,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 
 ### Misc
 - [x] Deleting recipes
+- Add one-click export to iOS Notes app for offline mobile shopping. Implement navigator.share() API with clipboard fallback to export formatted grocery lists using Unicode checkboxes (☐). Format includes optional quantities/categories. No network dependency - pure client-side export that integrates with native iOS Notes workflow.
 
 ## Installation & Development
 
