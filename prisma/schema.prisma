@@ -9,6 +9,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum StapleStatus {
+  PENDING
+  INCLUDED  
+  EXCLUDED
+}
+
 model Item {
   id                Int      @id @default(autoincrement())
   name              String   @unique
@@ -17,6 +23,9 @@ model Item {
   store_order_index Int?
   
   recipe_items      RecipeItem[]
+  staple_selections StapleSelection[]
+  adhoc_items      AdhocItem[]
+  item_exclusions  ItemExclusion[]
   
   @@map("items")
 }
@@ -26,6 +35,7 @@ model Recipe {
   name  String
   
   recipe_items     RecipeItem[]
+  meal_assignments MealAssignment[]
   
   @@map("recipes")
 }
@@ -40,4 +50,60 @@ model RecipeItem {
   
   @@id([recipe_id, item_id])
   @@map("recipe_items")
+}
+
+model PlanningSession {
+  id Int @id @default(autoincrement())
+  start_date DateTime
+  createdAt  DateTime   @default(now())
+
+  meal_assignments MealAssignment[]
+  staple_selections StapleSelection[]
+  adhoc_items AdhocItem[]
+  item_exclusions ItemExclusion[]
+
+  @@map("planning_sessions")
+}
+
+model MealAssignment {
+  planning_session_id Int
+  recipe_id Int?
+
+  planning_session PlanningSession @relation(fields: [planning_session_id], references: [id], onDelete: Cascade)
+  date DateTime
+  recipe Recipe? @relation(fields: [recipe_id], references: [id], onDelete: SetNull)
+
+  @@id([planning_session_id, date])
+}
+
+model StapleSelection {
+  planning_session_id Int
+  item_id Int
+  
+  planning_session PlanningSession @relation(fields: [planning_session_id], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [item_id], references: [id], onDelete: Restrict)
+  status StapleStatus @default(PENDING)
+
+  @@id([planning_session_id, item_id])
+}
+
+model AdhocItem {
+  planning_session_id Int
+  item_id Int
+
+  planning_session PlanningSession @relation(fields: [planning_session_id], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [item_id], references: [id], onDelete: Restrict)
+  amount String?
+
+  @@id([planning_session_id, item_id])
+}
+
+model ItemExclusion {
+  planning_session_id Int
+  item_id Int
+
+  planning_session PlanningSession @relation(fields: [planning_session_id], references: [id], onDelete: Cascade)
+  item Item @relation(fields: [item_id], references: [id], onDelete: Restrict)
+
+  @@id([planning_session_id, item_id])
 }
