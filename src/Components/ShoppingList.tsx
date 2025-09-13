@@ -4,8 +4,8 @@
 import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
-import { Recipe } from '@/lib/types'
 import Link from 'next/link'
+import { RecipeWithItems } from '@/lib/types'
 
 interface AdHocItem {
   item: string
@@ -19,7 +19,7 @@ interface Staple {
 }
 
 interface ShoppingListProps {
-  recipes: Recipe[]
+  recipes: RecipeWithItems[]
   excludedItems?: Set<string>
   onToggleExclusion?: (itemName: string) => void
   adHocItems?: AdHocItem[]

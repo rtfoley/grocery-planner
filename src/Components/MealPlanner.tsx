@@ -1,16 +1,18 @@
 // src/Components/MealPlanner.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Title, Group, Button, Select, Grid, Card, Text, Stack } from '@mantine/core'
+import { useEffect, useMemo, useState } from 'react'
+import { Title, Group, Button, Grid, Text, Stack } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
-import { Recipe, MealAssignment } from '@/lib/types'
+import { MealAssignmentWithRecipe, RecipeWithItems } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
+import { createMealAssignment, createPlanningSession, getActivePlanningSession, getMealAssignments, updateMealAssignment } from '@/lib/actions'
+import { MealList } from './MealList'
 
 interface MealPlannerProps {
-  recipes: Recipe[]
+  recipes: RecipeWithItems[]
   staples: Array<{ id: number, name: string, staple_amount: string | null }>
   allItems: Array<{ name: string, store_order_index: number | null }>
 }
@@ -18,56 +20,61 @@ interface MealPlannerProps {
 export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
   // State management
   const [startDate, setStartDate] = useState<Date | null>(new Date())
-  const [mealAssignments, setMealAssignments] = useState<MealAssignment[]>([])
   const [excludedItems, setExcludedItems] = useState<Set<string>>(new Set())
   const [adHocItems, setAdHocItems] = useState<Array<{ item: string, amount?: string }>>([])
   const [stapleSelections, setStapleSelections] = useState<Map<number, 'pending' | 'included' | 'excluded'>>(new Map())
 
-  // Generate 14 consecutive days from start date
-  const planningDays = useMemo(() => {
-    if (!startDate) return []
-    
-    return Array.from({ length: 14 }, (_, index) => {
-      const date = new Date(startDate)
-      date.setDate(date.getDate() + index)
-      return date
-    })
-  }, [startDate])
+  const [planningSessionId, setPlanningSessionId] = useState<number | null>();
+  const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
 
-  // Initialize meal assignments when start date changes
-  useMemo(() => {
-    if (planningDays.length > 0) {
-      setMealAssignments(planningDays.map(date => ({ date, recipeId: null })))
+  useEffect(() => {
+    async function fetchData() {
+      const planningSession = await getActivePlanningSession();
+      if(!planningSession)
+      {
+        return;
+      }
+
+      const assignments = await getMealAssignments(planningSession?.id);
+      setPlanningSessionId(planningSession.id);
+      setMealAssignments(assignments);
     }
-  }, [planningDays])
+    
+    fetchData();
+  }, [])
 
-  // Recipe options for select dropdown
-  const recipeOptions = [
-    { value: '', label: 'Select recipe...' },
-    ...recipes.map(recipe => ({
-      value: recipe.id.toString(),
-      label: recipe.name.length > 40 ? `${recipe.name.substring(0, 37)}...` : recipe.name
-    }))
-  ]
+  const startNewSession = async () => {
+    if(!startDate)
+    {
+      return;
+    }
 
-  // Event handlers
-  const handleRecipeChange = (dateIndex: number, recipeId: string) => {
-    setMealAssignments(prev => 
-      prev.map((assignment, index) => 
-        index === dateIndex 
-          ? { ...assignment, recipeId: recipeId ? parseInt(recipeId) : null }
-          : assignment
-      )
-    )
-  }
+    const planningSession = await createPlanningSession(startDate);
+    setPlanningSessionId(planningSession.id);
+    console.log(startDate);
 
-  const startNewSession = () => {
-    setStartDate(new Date())
-    setMealAssignments([])
-    setExcludedItems(new Set())
-    setAdHocItems([])
-    setStapleSelections(new Map())
-  }
+    const tempMealAssignments: MealAssignmentWithRecipe[] = [];
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(startDate); // Copy the full date
+      date.setDate(startDate.getDate() + i); // Add days to original day
+      const assignment: MealAssignmentWithRecipe = await createMealAssignment(planningSession.id, null, date);
+      tempMealAssignments.push(assignment);
+    }
+
+    console.log(tempMealAssignments);
+    setMealAssignments(tempMealAssignments);
+  };
+
+  const endDate = useMemo(() => {
+    if (!startDate)
+    {
+      return new Date();
+    }
+
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + 14);
+    return date;
+  }, [startDate])
 
   const toggleItemExclusion = (itemName: string) => {
     setExcludedItems(prev => {
@@ -97,10 +104,22 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
     })
   }
 
-  // Get selected recipes for shopping list
+  const handleRecipeChange = async (assignment: MealAssignmentWithRecipe, recipeId: number | null) =>
+  {
+    setMealAssignments(prev => 
+      prev.map(existingAssignment => 
+        existingAssignment.date.getTime() === assignment.date.getTime()
+          ? { ...existingAssignment, recipe_id: recipeId }
+          : existingAssignment
+      )
+    );
+
+    await updateMealAssignment(assignment.planning_session_id, recipeId, assignment.date);
+  }
+
   const selectedRecipes = mealAssignments
-    .filter(assignment => assignment.recipeId)
-    .map(assignment => recipes.find(r => r.id === assignment.recipeId)!)
+    .filter(assignment => assignment.recipe_id)
+    .map(assignment => recipes.find(r => r.id === assignment.recipe_id)!)
     .filter(Boolean)
 
   return (
@@ -113,7 +132,7 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
               {startDate.toLocaleDateString('en-US', { 
                 month: 'long', 
                 day: 'numeric' 
-              })} - {planningDays[13]?.toLocaleDateString('en-US', { 
+              })} - {endDate.toLocaleDateString('en-US', { 
                 month: 'long', 
                 day: 'numeric' 
               })}
@@ -124,7 +143,7 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
           <DatePickerInput
             label="Start Date"
             value={startDate}
-            onChange={setStartDate}
+            onChange={(value: Date | null) => setStartDate(value)}
             leftSection={<IconCalendar size={16} />}
             clearable={false}
             placeholder="Pick start date"
@@ -138,34 +157,7 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
 
       <Grid>
         <Grid.Col span={{ base: 12, md: 4 }}>
-          <Card>
-            <Title order={3} mb="md">Planning Session</Title>
-            <Stack gap="sm">
-              {planningDays.map((date, index) => {
-                const assignment = mealAssignments[index]
-                return (
-                  <Group key={index} justify="space-between">
-                    <Text w={80} size="sm">
-                      {date.toLocaleDateString('en-US', { 
-                        weekday: 'short',
-                        month: 'numeric',
-                        day: 'numeric'
-                      })}
-                    </Text>
-                    <Select
-                      placeholder="Select recipe..."
-                      data={recipeOptions}
-                      value={assignment?.recipeId?.toString() || ''}
-                      onChange={(value) => handleRecipeChange(index, value || '')}
-                      style={{ flex: 1 }}
-                      clearable
-                      size="sm"
-                    />
-                  </Group>
-                )
-              })}
-            </Stack>
-          </Card>
+          <MealList mealAssignments={mealAssignments} recipes={recipes} onRecipeChange={handleRecipeChange}/>
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 4 }}>

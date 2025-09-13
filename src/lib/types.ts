@@ -1,23 +1,17 @@
 // src/lib/types.ts
 
-export interface Recipe {
-  id: number
-  name: string
-  recipe_items: Array<{
-    item: { name: string }
-    amount: string | null
-  }>
-}
+import { Prisma } from "@prisma/client"
 
-export interface Item {
-  id: number
-  name: string
-  is_staple: boolean
-  staple_amount: string | null
-  store_order_index: number | null
-}
+export type MealAssignmentWithRecipe = Prisma.MealAssignmentGetPayload<{
+  include: { recipe: true }
+}>;
 
-export interface MealAssignment {
-  date: Date
-  recipeId: number | null
-}
+export type RecipeWithItems = Prisma.RecipeGetPayload<{
+  include: { 
+    recipe_items: {
+      include:{
+        item: true
+      }
+    }
+  }
+}>;

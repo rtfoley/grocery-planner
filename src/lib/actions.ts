@@ -1,7 +1,9 @@
 'use server'
 
 import { prisma } from '@/lib/prisma'
+import { PlanningSession, StapleStatus } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
+import { MealAssignmentWithRecipe, RecipeWithItems } from './types'
 
 // Item actions
 export async function createItem(name: string, is_staple: boolean = false, staple_amount?: string) {
@@ -159,7 +161,7 @@ export async function deleteRecipe(id: number) {
   }
 }
 
-export async function getRecipes() {
+export async function getRecipes(): Promise<RecipeWithItems[]> {
   return await prisma.recipe.findMany({
     include: {
       recipe_items: {
@@ -170,12 +172,160 @@ export async function getRecipes() {
   })
 }
 
-export async function getRecipe(id: number) {
+export async function getRecipe(id: number): Promise<RecipeWithItems | null> {
   return await prisma.recipe.findUnique({
     where: { id },
     include: {
       recipe_items: {
         include: { item: true }
+      }
+    }
+  })
+}
+
+export async function createPlanningSession(startDate: Date) {
+  return await prisma.planningSession.create({
+    data: {
+      start_date: startDate
+    }
+  });
+}
+
+export async function getActivePlanningSession(): Promise<PlanningSession | null> {
+  return await prisma.planningSession.findFirst({
+    where: {
+      start_date: {
+        lte: new Date()
+      }
+    },
+    orderBy: {
+      id: 'desc'
+    },
+  })
+}
+
+export async function createMealAssignment(planningSessionId: number, recipeId: number | null, date: Date): Promise<MealAssignmentWithRecipe> {
+  return await prisma.mealAssignment.create({
+    data: {
+      planning_session_id: planningSessionId,
+      recipe_id: recipeId,
+      date: date
+    },
+    include:
+    {
+      recipe: true
+    }
+  });
+}
+
+export async function getMealAssignments(planningSessionId: number) : Promise<MealAssignmentWithRecipe[]>
+{
+  return await prisma.mealAssignment.findMany({
+    where: {
+      planning_session_id: planningSessionId
+    },
+    include: {
+      recipe: true
+    }
+  });
+}
+
+export async function updateMealAssignment(planningSessionId: number, recipeId: number | null, date: Date) {
+  return await prisma.mealAssignment.update({
+    where: {
+      planning_session_id_date: {
+        planning_session_id: planningSessionId, 
+        date: date,
+      }
+    },
+    data: {
+      recipe_id: recipeId
+    } 
+  });
+}
+
+export async function createStapleSelection(planningSessionId: number, itemId: number, status: StapleStatus) {
+  return await prisma.stapleSelection.create({
+    data: {
+      planning_session_id: planningSessionId,
+      item_id: itemId,
+      status: status
+    }
+  });
+}
+
+export async function updateStapleSelection(planningSessionId: number, itemId: number, status: StapleStatus) {
+  return await prisma.stapleSelection.update({
+    where: {
+      planning_session_id_item_id: {
+        planning_session_id: planningSessionId,
+        item_id: itemId
+      },
+      
+    },
+    data: {
+      status: status
+    }
+  })
+}
+
+// TODO adhoc items
+export async function addAdhocItem(planningSessionId: number, itemId: number, amount: string)
+{
+  return await prisma.adhocItem.create({
+    data: {
+      planning_session_id: planningSessionId,
+      item_id: itemId,
+      amount: amount
+    }
+  });
+}
+
+export async function updateAdhocItem(planningSessionId: number, itemId: number, amount: string)
+{
+  return await prisma.adhocItem.update({
+    where: {
+      planning_session_id_item_id: {
+        planning_session_id: planningSessionId,
+        item_id: itemId
+      }
+    },
+    data: {
+      amount: amount
+    }
+  })
+}
+
+export async function deleteAdhocItem(planningSessionId: number, itemId: number)
+{
+  return await prisma.adhocItem.delete({
+    where: {
+      planning_session_id_item_id: {
+        planning_session_id: planningSessionId,
+        item_id: itemId
+      }
+    }
+  })
+}
+
+// item exclusions
+export async function addItemExclusion(planningSessionId: number, itemId: number)
+{
+  return await prisma.itemExclusion.create({
+    data: {
+      planning_session_id: planningSessionId,
+      item_id: itemId
+    }
+  })
+}
+
+export async function deleteItemExclusion(planningSessionId: number, itemId: number)
+{
+  return await prisma.itemExclusion.delete({
+    where: {
+      planning_session_id_item_id: {
+        planning_session_id: planningSessionId,
+        item_id: itemId
       }
     }
   })
