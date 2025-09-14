@@ -5,23 +5,21 @@ import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import Link from 'next/link'
-import { RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
-import { StapleStatus } from '@prisma/client'
-
-interface AdHocItem {
-  item: string
-  amount?: string
-}
+import { AdhocItemWithItem, ItemExclusionWithItem, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
+import { Item, StapleStatus } from '@prisma/client'
+import { ItemAutocomplete } from './ItemAutocomplete'
 
 interface ShoppingListProps {
   recipes: RecipeWithItems[]
-  excludedItems?: Set<string>
-  onToggleExclusion?: (itemName: string) => void
-  adHocItems?: AdHocItem[]
-  onAddAdHocItem?: (item: string, amount?: string) => void
-  onRemoveAdHocItem?: (index: number) => void
+  excludedItems?: ItemExclusionWithItem[]
+  onExcludeItem?: (itemId: number) => void
+  onUnexcludeItem?: (itemExclusion: ItemExclusionWithItem) => void
+  adHocItems?: AdhocItemWithItem[]
+  onAddAdHocItem?: (itemName: string, amount: string) => void
+  onUpdateAdhocItem?: (updatedItem: AdhocItemWithItem) => void
+  onRemoveAdHocItem?: (removedItem: AdhocItemWithItem) => void
   stapleSelections?: StapleSelectionWithItem[]
-  allItems?: Array<{ name: string, store_order_index: number | null }>
+  allItems?: Item[]
 }
 
 interface ShoppingItem {
@@ -35,8 +33,9 @@ interface ShoppingItem {
 
 export function ShoppingList({ 
   recipes, 
-  excludedItems = new Set(), 
-  onToggleExclusion,
+  excludedItems, 
+  onExcludeItem,
+  onUnexcludeItem,
   adHocItems = [],
   onAddAdHocItem,
   onRemoveAdHocItem,
@@ -102,12 +101,12 @@ export function ShoppingList({
     }
 
     // Add ad-hoc items
-    const adHocDisplayItems: ShoppingItem[] = adHocItems.map(item => ({
-      itemName: item.item,
-      amounts: item.amount ? [item.amount] : [],
+    const adHocDisplayItems: ShoppingItem[] = adHocItems.map(adhocItem => ({
+      itemName: adhocItem.item.name,
+      amounts: adhocItem.amount ? [adhocItem.amount] : [],
       recipeCount: 0, // Indicates this is ad-hoc
       isAdHoc: true,
-      orderIndex: orderLookup.get(item.item)
+      orderIndex: orderLookup.get(adhocItem.item.name)
     }))
 
     return [...items, ...adHocDisplayItems]
@@ -162,14 +161,21 @@ export function ShoppingList({
 
   // Event handlers
   const handleExclusionToggle = (itemName: string) => {
-    if (onToggleExclusion) {
-      onToggleExclusion(itemName)
+    const itemId = allItems.find(item => item.name === itemName)?.id
+    if (!itemId) return
+
+    const existingExclusion = excludedItems?.find(exclusion => exclusion.item.name === itemName)
+
+    if (existingExclusion) {
+      onUnexcludeItem?.(existingExclusion)
+    } else {
+      onExcludeItem?.(itemId)
     }
   }
 
   const handleAddAdHocItem = () => {
     if (newItemName.trim() && onAddAdHocItem) {
-      onAddAdHocItem(newItemName.trim(), newItemAmount.trim() || undefined)
+      onAddAdHocItem(newItemName.trim(), newItemAmount.trim() || '')
       setNewItemName('')
       setNewItemAmount('')
     }
@@ -177,9 +183,9 @@ export function ShoppingList({
 
   const handleRemoveAdHocItem = (itemName: string) => {
     if (onRemoveAdHocItem) {
-      const index = adHocItems.findIndex(item => item.item === itemName)
-      if (index !== -1) {
-        onRemoveAdHocItem(index)
+      const adhocItem = adHocItems.find(item => item.item.name === itemName)
+      if (adhocItem) {
+        onRemoveAdHocItem(adhocItem)
       }
     }
   }
@@ -206,7 +212,7 @@ export function ShoppingList({
             <div>
               <Text size="sm" fw={500}>Items need positioning</Text>
               <Text size="xs">
-                {unpositionedItems.length} item{unpositionedItems.length > 1 ? 's' : ''} don't have store positions yet
+                {unpositionedItems.length} item{unpositionedItems.length > 1 ? 's' : ''} don&apos;t have store positions yet
               </Text>
             </div>
             <Button size="xs" component={Link} href="/store-order">
@@ -221,7 +227,7 @@ export function ShoppingList({
       ) : (
         <Stack gap="xs">
           {sortedItems.map((item, index) => {
-            const isExcluded = excludedItems.has(item.itemName)
+            const isExcluded = excludedItems?.some(exclusion => exclusion.item.name === item.itemName) || false
             const isAdHoc = item.isAdHoc
             
             return (
@@ -267,11 +273,11 @@ export function ShoppingList({
       <Stack gap="xs" mt="md" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
         <Text size="sm" fw={500}>Add Item</Text>
         <Group align="flex-end">
-          <TextInput
+          <ItemAutocomplete
             placeholder="Item name"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
             style={{ flex: 2 }}
+            value={newItemName}
+            onChange={(value) => setNewItemName(value)}
             size="sm"
           />
           <TextInput

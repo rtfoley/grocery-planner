@@ -21,3 +21,15 @@ export type StapleSelectionWithItem = Prisma.StapleSelectionGetPayload<{
     item: true
   }
 }>;
+
+export type ItemExclusionWithItem = Prisma.ItemExclusionGetPayload<{
+  include: {
+    item: true
+  }
+}>;
+
+export type AdhocItemWithItem = Prisma.AdhocItemGetPayload<{
+  include: {
+    item: true
+  }
+}>;

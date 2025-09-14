@@ -284,18 +284,39 @@ export async function updateStapleSelection(planningSessionId: number, itemId: n
 }
 
 // TODO adhoc items
-export async function addAdhocItem(planningSessionId: number, itemId: number, amount: string)
-{
+export async function createAdhocItem(planningSessionId: number, itemName: string, amount: string | null) {
+  // First, get or create the item
+  const item = await prisma.item.upsert({
+    where: { name: itemName.toLowerCase().trim() },
+    create: { name: itemName.toLowerCase().trim() },
+    update: {}
+  });
+
+  // Then create the adhoc item using the item_id
   return await prisma.adhocItem.create({
     data: {
       planning_session_id: planningSessionId,
-      item_id: itemId,
+      item_id: item.id,  // Use the foreign key directly
       amount: amount
+    },
+    include: {
+      item: true
     }
   });
 }
 
-export async function updateAdhocItem(planningSessionId: number, itemId: number, amount: string)
+export async function getAdhocItems(planningSessionId: number) {
+  return await prisma.adhocItem.findMany({
+    where: {
+      planning_session_id: planningSessionId
+    },
+    include: {
+      item: true
+    }
+  });
+}
+
+export async function updateAdhocItem(planningSessionId: number, itemId: number, amount: string | null)
 {
   return await prisma.adhocItem.update({
     where: {
@@ -329,8 +350,22 @@ export async function addItemExclusion(planningSessionId: number, itemId: number
     data: {
       planning_session_id: planningSessionId,
       item_id: itemId
+    },
+    include: {
+      item: true
     }
-  })
+  });
+}
+
+export async function getItemExclusions(planningSessionId: number) {
+  return await prisma.itemExclusion.findMany({
+    where: {
+      planning_session_id: planningSessionId
+    },
+    include: {
+      item: true
+    }
+  });
 }
 
 export async function deleteItemExclusion(planningSessionId: number, itemId: number)

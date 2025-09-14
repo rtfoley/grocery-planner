@@ -5,12 +5,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { Title, Group, Button, Grid, Text, Stack } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
-import { MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
+import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
-import { createMealAssignment, createPlanningSession, createStapleSelection, getActivePlanningSession, getMealAssignments, getStapleSelections, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
+import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getActivePlanningSession, getAdhocItems, getItemExclusions, getMealAssignments, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
-import { Item, StapleSelection, StapleStatus } from '@prisma/client'
+import { Item, StapleStatus } from '@prisma/client'
 
 interface MealPlannerProps {
   recipes: RecipeWithItems[]
@@ -20,12 +20,11 @@ interface MealPlannerProps {
 export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   // State management
   const [startDate, setStartDate] = useState<Date | null>(new Date())
-  const [excludedItems, setExcludedItems] = useState<Set<string>>(new Set())
-  const [adHocItems, setAdHocItems] = useState<Array<{ item: string, amount?: string }>>([])
-
-  const [planningSessionId, setPlanningSessionId] = useState<number | null>();
+  const [planningSessionId, setPlanningSessionId] = useState<number | undefined>();
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
+  const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
+  const [adHocItems, setAdHocItems] = useState<AdhocItemWithItem[]>([])
 
   useEffect(() => {
     async function fetchData() {
@@ -40,8 +39,15 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       const assignments = await getMealAssignments(planningSession?.id);
       setMealAssignments(assignments);
 
+      // TODO check for staples that have been added that don't yet have selection records
       const staples = await getStapleSelections(planningSession.id);
       setStapleSelections(staples);
+
+      const itemExclusions = await getItemExclusions(planningSession.id);
+      setExcludedItems(itemExclusions);
+
+      const additionalItems = await getAdhocItems(planningSession.id);
+      setAdHocItems(additionalItems);
     }
     
     fetchData();
@@ -53,9 +59,9 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       return;
     }
 
+    //// TODO add loading spinner
     const planningSession = await createPlanningSession(startDate);
     setPlanningSessionId(planningSession.id);
-    console.log(startDate);
 
     const tempMealAssignments: MealAssignmentWithRecipe[] = [];
     for (let i = 0; i < 14; i++) {
@@ -76,6 +82,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     }
 
     setStapleSelections(tempStapleSelections);
+    setExcludedItems([]);
   };
 
   const endDate = useMemo(() => {
@@ -89,24 +96,44 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     return date;
   }, [startDate])
 
-  const toggleItemExclusion = (itemName: string) => {
-    setExcludedItems(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(itemName)) {
-        newSet.delete(itemName)
-      } else {
-        newSet.add(itemName)
-      }
-      return newSet
-    })
+  const excludeItem = async (itemId: number) => {
+    if(planningSessionId === null)
+    {
+      return;
+    }
+
+    const itemExclusion = await addItemExclusion(planningSessionId!, itemId);
+
+    setExcludedItems(prev => [...prev, itemExclusion]);
   }
 
-  const addAdHocItem = (item: string, amount?: string) => {
-    setAdHocItems(prev => [...prev, { item: item.toLowerCase().trim(), amount }])
+  const unexcludeItem = async (itemExclusion: ItemExclusionWithItem) => {
+    setExcludedItems(prev => prev.filter(item => item.item_id !== itemExclusion.item_id));
+    await deleteItemExclusion(planningSessionId!, itemExclusion.item_id);
   }
 
-  const removeAdHocItem = (index: number) => {
-    setAdHocItems(prev => prev.filter((_, i) => i !== index))
+  const addAdHocItem = async (itemName: string, amount: string) => {
+    const newItem = await createAdhocItem(planningSessionId!, itemName, amount)
+
+    setAdHocItems(prev => [...prev, newItem])
+  }
+
+  const updateAddhocItemAmount = async (updatedItem: AdhocItemWithItem) => {
+    setAdHocItems(prev => 
+      prev.map(item =>
+        item.item_id === updatedItem.item_id
+          ? {...item, amount: updatedItem.amount}
+          : item
+      )
+    );
+
+    await updateAdhocItem(updatedItem.planning_session_id, updatedItem.item_id, updatedItem.amount);
+  }
+
+  const removeAdHocItem = async (removedItem: AdhocItemWithItem) => {
+    setAdHocItems(prev => prev.filter((item) => item.item_id !== removedItem.item_id));
+
+    await deleteAdhocItem(removedItem.planning_session_id, removedItem.item_id);
   }
 
   const handleStapleSelection = async (stapleSelection: StapleSelectionWithItem, newStatus: StapleStatus) => {
@@ -189,9 +216,11 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
           <ShoppingList 
             recipes={selectedRecipes} 
             excludedItems={excludedItems}
-            onToggleExclusion={toggleItemExclusion}
+            onExcludeItem={excludeItem}
+            onUnexcludeItem={unexcludeItem}
             adHocItems={adHocItems}
             onAddAdHocItem={addAdHocItem}
+            onUpdateAdhocItem={updateAddhocItemAmount}
             onRemoveAdHocItem={removeAdHocItem}
             stapleSelections={stapleSelections}
             allItems={allItems}

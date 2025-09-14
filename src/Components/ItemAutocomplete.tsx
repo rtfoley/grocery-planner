@@ -12,6 +12,7 @@ interface ItemAutocompleteProps {
   placeholder?: string
   style?: React.CSSProperties
   error?: string
+  size?: string
 }
 
 export function ItemAutocomplete({ 
@@ -20,7 +21,8 @@ export function ItemAutocomplete({
   label, 
   placeholder,
   style,
-  error
+  error,
+  size
 }: ItemAutocompleteProps) {
   const [items, setItems] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -50,6 +52,7 @@ export function ItemAutocomplete({
       style={style}
       error={error}
       disabled={loading}
+      size={size}
     />
   )
 }
