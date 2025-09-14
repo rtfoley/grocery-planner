@@ -15,3 +15,9 @@ export type RecipeWithItems = Prisma.RecipeGetPayload<{
     }
   }
 }>;
+
+export type StapleSelectionWithItem = Prisma.StapleSelectionGetPayload<{
+  include: {
+    item: true
+  }
+}>;

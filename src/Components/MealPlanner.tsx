@@ -5,27 +5,27 @@ import { useEffect, useMemo, useState } from 'react'
 import { Title, Group, Button, Grid, Text, Stack } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
-import { MealAssignmentWithRecipe, RecipeWithItems } from '@/lib/types'
+import { MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
-import { createMealAssignment, createPlanningSession, getActivePlanningSession, getMealAssignments, updateMealAssignment } from '@/lib/actions'
+import { createMealAssignment, createPlanningSession, createStapleSelection, getActivePlanningSession, getMealAssignments, getStapleSelections, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
+import { Item, StapleSelection, StapleStatus } from '@prisma/client'
 
 interface MealPlannerProps {
   recipes: RecipeWithItems[]
-  staples: Array<{ id: number, name: string, staple_amount: string | null }>
-  allItems: Array<{ name: string, store_order_index: number | null }>
+  allItems: Item[]
 }
 
-export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
+export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   // State management
   const [startDate, setStartDate] = useState<Date | null>(new Date())
   const [excludedItems, setExcludedItems] = useState<Set<string>>(new Set())
   const [adHocItems, setAdHocItems] = useState<Array<{ item: string, amount?: string }>>([])
-  const [stapleSelections, setStapleSelections] = useState<Map<number, 'pending' | 'included' | 'excluded'>>(new Map())
 
   const [planningSessionId, setPlanningSessionId] = useState<number | null>();
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
+  const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
 
   useEffect(() => {
     async function fetchData() {
@@ -35,9 +35,13 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
         return;
       }
 
-      const assignments = await getMealAssignments(planningSession?.id);
       setPlanningSessionId(planningSession.id);
+
+      const assignments = await getMealAssignments(planningSession?.id);
       setMealAssignments(assignments);
+
+      const staples = await getStapleSelections(planningSession.id);
+      setStapleSelections(staples);
     }
     
     fetchData();
@@ -61,8 +65,17 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
       tempMealAssignments.push(assignment);
     }
 
-    console.log(tempMealAssignments);
     setMealAssignments(tempMealAssignments);
+
+    const tempStapleSelections: StapleSelectionWithItem[] = [];
+    for (const item of allItems) {
+      if (item.is_staple) {
+        const stapleSelection = await createStapleSelection(planningSession.id, item.id, StapleStatus.PENDING);
+        tempStapleSelections.push(stapleSelection);
+      }
+    }
+
+    setStapleSelections(tempStapleSelections);
   };
 
   const endDate = useMemo(() => {
@@ -96,12 +109,17 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
     setAdHocItems(prev => prev.filter((_, i) => i !== index))
   }
 
-  const handleStapleSelection = (stapleId: number, status: 'pending' | 'included' | 'excluded') => {
-    setStapleSelections(prev => {
-      const newMap = new Map(prev)
-      newMap.set(stapleId, status)
-      return newMap
-    })
+  const handleStapleSelection = async (stapleSelection: StapleSelectionWithItem, newStatus: StapleStatus) => {
+    setStapleSelections(prev => 
+      prev.map(selection => 
+        selection.item_id === stapleSelection.item_id
+          ? { ...selection, status: newStatus }
+          : selection
+      )
+    );
+
+    // Persist to DB
+    await updateStapleSelection(stapleSelection.planning_session_id!, stapleSelection.item_id, newStatus);
   }
 
   const handleRecipeChange = async (assignment: MealAssignmentWithRecipe, recipeId: number | null) =>
@@ -162,7 +180,6 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
 
         <Grid.Col span={{ base: 12, md: 4 }}>
           <StaplesSelector
-            staples={staples}
             stapleSelections={stapleSelections}
             onStapleSelection={handleStapleSelection}
           />
@@ -176,7 +193,6 @@ export function MealPlanner({ recipes, staples, allItems }: MealPlannerProps) {
             adHocItems={adHocItems}
             onAddAdHocItem={addAdHocItem}
             onRemoveAdHocItem={removeAdHocItem}
-            staples={staples}
             stapleSelections={stapleSelections}
             allItems={allItems}
           />

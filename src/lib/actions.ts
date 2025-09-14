@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma'
 import { PlanningSession, StapleStatus } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
-import { MealAssignmentWithRecipe, RecipeWithItems } from './types'
+import { MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem } from './types'
 
 // Item actions
 export async function createItem(name: string, is_staple: boolean = false, staple_amount?: string) {
@@ -244,12 +244,26 @@ export async function updateMealAssignment(planningSessionId: number, recipeId: 
   });
 }
 
-export async function createStapleSelection(planningSessionId: number, itemId: number, status: StapleStatus) {
+export async function createStapleSelection(planningSessionId: number, itemId: number, status: StapleStatus): Promise<StapleSelectionWithItem> {
   return await prisma.stapleSelection.create({
     data: {
       planning_session_id: planningSessionId,
       item_id: itemId,
       status: status
+    },
+    include: {
+      item: true
+    }
+  });
+}
+
+export async function getStapleSelections(planningSessionId: number): Promise<StapleSelectionWithItem[]> {
+  return await prisma.stapleSelection.findMany({
+    where: {
+      planning_session_id: planningSessionId
+    },
+    include: {
+      item: true
     }
   });
 }

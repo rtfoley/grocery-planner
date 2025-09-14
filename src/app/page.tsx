@@ -9,14 +9,11 @@ export default async function HomePage() {
     getItems()
   ])
   
-  const staples = items.filter(item => item.is_staple)
-  
   return (
     <Container size="xl" py="xl">
       <MealPlanner 
         recipes={recipes} 
-        staples={staples}
-        allItems={items.map(item => ({ name: item.name, store_order_index: item.store_order_index }))}
+        allItems={items}
       />
     </Container>
   )

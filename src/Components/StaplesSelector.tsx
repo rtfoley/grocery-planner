@@ -1,54 +1,43 @@
 // src/Components/StaplesSelector.tsx
 'use client'
 
+import { StapleSelectionWithItem } from '@/lib/types'
 import { Card, Title, Text, Stack, Group, Button } from '@mantine/core'
-
-interface Staple {
-  id: number
-  name: string
-  staple_amount: string | null
-}
+import { StapleStatus } from '@prisma/client'
 
 interface StaplesSelectorProps {
-  staples: Staple[]
-  stapleSelections: Map<number, 'pending' | 'included' | 'excluded'>
-  onStapleSelection: (stapleId: number, status: 'pending' | 'included' | 'excluded') => void
+  stapleSelections: StapleSelectionWithItem[]
+  onStapleSelection: (staple: StapleSelectionWithItem, newStatus: StapleStatus) => void
 }
 
-export function StaplesSelector({ 
-  staples, 
+export function StaplesSelector({  
   stapleSelections, 
   onStapleSelection 
 }: StaplesSelectorProps) {
-  if (staples.length === 0) {
-    return null
-  }
-
   return (
     <Card>
       <Title order={3} mb="md">Staples</Title>
       <Stack gap="xs">
-        {staples.map(staple => {
-          const selection = stapleSelections.get(staple.id) || 'pending'
+        {stapleSelections.map((staple: StapleSelectionWithItem) => {
           return (
-            <Group key={staple.id} justify="space-between" align="center">
+            <Group key={staple.item_id} justify="space-between" align="center">
               <Text size="sm" style={{ flex: 1 }}>
-                {staple.staple_amount ? `${staple.name}: ${staple.staple_amount}` : staple.name}
+                {staple.item.staple_amount ? `${staple.item.name}: ${staple.item.staple_amount}` : staple.item.name}
               </Text>
               <Group gap="xs">
                 <Button
                   size="xs"
-                  variant={selection === 'included' ? 'filled' : 'subtle'}
-                  color={selection === 'included' ? 'green' : 'gray'}
-                  onClick={() => onStapleSelection(staple.id, 'included')}
+                  variant={staple.status === StapleStatus.INCLUDED ? 'filled' : 'subtle'}
+                  color={staple.status === StapleStatus.INCLUDED ? 'green' : 'gray'}
+                  onClick={() => onStapleSelection(staple, StapleStatus.INCLUDED)}
                 >
                   Include
                 </Button>
                 <Button
                   size="xs"
-                  variant={selection === 'excluded' ? 'filled' : 'subtle'}
-                  color={selection === 'excluded' ? 'red' : 'gray'}
-                  onClick={() => onStapleSelection(staple.id, 'excluded')}
+                  variant={staple.status === StapleStatus.EXCLUDED ? 'filled' : 'subtle'}
+                  color={staple.status === StapleStatus.EXCLUDED ? 'red' : 'gray'}
+                  onClick={() => onStapleSelection(staple, StapleStatus.EXCLUDED)}
                 >
                   Skip
                 </Button>

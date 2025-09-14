@@ -5,17 +5,12 @@ import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import Link from 'next/link'
-import { RecipeWithItems } from '@/lib/types'
+import { RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
+import { StapleStatus } from '@prisma/client'
 
 interface AdHocItem {
   item: string
   amount?: string
-}
-
-interface Staple {
-  id: number
-  name: string
-  staple_amount: string | null
 }
 
 interface ShoppingListProps {
@@ -25,8 +20,7 @@ interface ShoppingListProps {
   adHocItems?: AdHocItem[]
   onAddAdHocItem?: (item: string, amount?: string) => void
   onRemoveAdHocItem?: (index: number) => void
-  staples?: Staple[]
-  stapleSelections?: Map<number, 'pending' | 'included' | 'excluded'>
+  stapleSelections?: StapleSelectionWithItem[]
   allItems?: Array<{ name: string, store_order_index: number | null }>
 }
 
@@ -46,8 +40,7 @@ export function ShoppingList({
   adHocItems = [],
   onAddAdHocItem,
   onRemoveAdHocItem,
-  staples = [],
-  stapleSelections = new Map(),
+  stapleSelections,
   allItems = []
 }: ShoppingListProps) {
   // State for adding new ad-hoc items and sorting preference
@@ -94,16 +87,19 @@ export function ShoppingList({
     const items = [...recipeShoppingItems]
 
     // Add selected staples
-    const selectedStaples: ShoppingItem[] = staples
-      .filter(staple => stapleSelections.get(staple.id) === 'included')
+    if (!!stapleSelections && stapleSelections.length > 0) {
+      const selectedStaples: ShoppingItem[] = stapleSelections
+      .filter(staple => staple.status === StapleStatus.INCLUDED)
       .map(staple => ({
-        itemName: staple.name,
-        amounts: staple.staple_amount ? [staple.staple_amount] : [],
+        itemName: staple.item.name,
+        amounts: staple.item.staple_amount ? [staple.item.staple_amount] : [],
         recipeCount: 0, // Indicates this is a staple
         isStaple: true,
-        orderIndex: orderLookup.get(staple.name)
+        orderIndex: orderLookup.get(staple.item.name)
       }))
-    items.push(...selectedStaples)
+
+      items.push(...selectedStaples)
+    }
 
     // Add ad-hoc items
     const adHocDisplayItems: ShoppingItem[] = adHocItems.map(item => ({
@@ -115,7 +111,7 @@ export function ShoppingList({
     }))
 
     return [...items, ...adHocDisplayItems]
-  }, [recipeShoppingItems, staples, stapleSelections, adHocItems, orderLookup])
+  }, [recipeShoppingItems, stapleSelections, adHocItems, orderLookup])
 
   // Sort items based on selected mode
   const sortedItems = useMemo(() => {
