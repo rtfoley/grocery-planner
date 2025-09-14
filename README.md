@@ -62,8 +62,8 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Database foundation (Item, Recipe, RecipeItem tables)
 - [x] Basic Recipe CRUD operations
 - [x] Item autocomplete component
-- [ ] In-memory meal planning interface (14 days)
-- [ ] Shopping list generation with ingredient counts
+- [x] In-memory meal planning interface (14 days)
+- [x] Shopping list generation with ingredient counts
 
 ### Slice 1.5: Item Exclusions
 - [x] In-memory item exclusions ("we have flour at home")
@@ -86,18 +86,18 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Store ordering interface (`/store-order`)
 - [x] Drag-and-drop item reordering
 - [x] Shopping list display in custom store order
-- [ ] Warning for unpositioned items
+- [x] Warning for unpositioned items
 
 ### Slice 5: Full Persistence
-- [ ] Add PlanningSession, MealAssignment, AdHocItem tables
-- [ ] Convert all in-memory state to persistent storage
+- [x] Add PlanningSession, MealAssignment, AdHocItem tables
+- [x] Convert all in-memory state to persistent storage
 - [ ] Session history and management
 - [ ] Pi deployment setup
 - [ ] PM2 process management configuration
 
 ### Misc
 - [x] Deleting recipes
-- Add one-click export to iOS Notes app for offline mobile shopping. Implement navigator.share() API with clipboard fallback to export formatted grocery lists using Unicode checkboxes (☐). Format includes optional quantities/categories. No network dependency - pure client-side export that integrates with native iOS Notes workflow.
+- [x] Add one-click export to iOS Notes app for offline mobile shopping
 
 ## Installation & Development
 
