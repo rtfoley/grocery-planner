@@ -190,6 +190,23 @@ export function ShoppingList({
     }
   }
 
+  const shareViaShortcuts = (groceryItems: ShoppingItem[]): void => {
+      // Create set of excluded names for O(1) lookup
+    const excludedNames = new Set(excludedItems?.map(item => item.item.name.toLowerCase())) || [];
+    
+    // Filter out excluded items
+    const includedItems = groceryItems.filter(item => !excludedNames.has(item.itemName.toLowerCase()));
+    
+    const itemsText = includedItems
+      .map(item => `${item.itemName} ${item.amounts?.join(', ') || ''}`)
+      .join('\n');
+    
+    const encodedItems = encodeURIComponent(itemsText);
+    const shortcutsURL = `shortcuts://run-shortcut?name=GroceryCheckboxes&input=text&text=${encodedItems}`;
+    
+    window.open(shortcutsURL, '_self');
+  };
+
   return (
     <Card>
       <Group justify="space-between" align="center" mb="md">
@@ -203,6 +220,9 @@ export function ShoppingList({
             { label: 'A-Z', value: 'alphabetical' }
           ]}
         />
+        <Button size="compact-sm" onClick={() => shareViaShortcuts(sortedItems)}>
+          Share
+        </Button>
       </Group>
       
       {/* Warning for unpositioned items (only show in store order mode) */}
