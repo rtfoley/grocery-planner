@@ -91,13 +91,19 @@ Streamlines the process of planning meals and generating grocery lists by:
 ### Slice 5: Full Persistence
 - [x] Add PlanningSession, MealAssignment, AdHocItem tables
 - [x] Convert all in-memory state to persistent storage
+- [x] handle duplicate items across recipes and staples within a shopping list
 - [ ] Session history and management
+
+### Splice 6: Deployment
 - [ ] Pi deployment setup
 - [ ] PM2 process management configuration
 
-### Misc
+### Other Features
 - [x] Deleting recipes
 - [x] Add one-click export to iOS Notes app for offline mobile shopping
+- [ ] allow user to specify start and end date of a session
+- [ ] allow user to add extra meals that don't have a date specified
+- [ ] allow for multiple store orders (i.e. different locations of the same chain)
 
 ## Installation & Development
 

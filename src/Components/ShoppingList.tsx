@@ -97,7 +97,15 @@ export function ShoppingList({
         orderIndex: orderLookup.get(staple.item.name)
       }))
 
-      items.push(...selectedStaples)
+      items.forEach((item) => {
+        if(selectedStaples.find(x => x.itemName === item.itemName))
+        {
+          item.isStaple = true;
+        }
+      })
+
+      const deduplicatedStaples = selectedStaples.filter(staple => !items.find(x => x.itemName === staple.itemName));
+      items.push(...deduplicatedStaples)
     }
 
     // Add ad-hoc items
@@ -136,28 +144,30 @@ export function ShoppingList({
   )
 
   // Format item display text
+  //// TODO turn into helper, add unit tests
   const formatItem = (item: ShoppingItem) => {
-    if (item.isStaple) {
-      return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName
+    // Handle simple cases first
+    if (item.isStaple && item.recipeCount === 0) {
+      return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName;
     }
-
+    
     if (item.isAdHoc) {
-      return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName
-    }
-
-    if (item.amounts.length === 0) {
-      return `${item.itemName} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''})`
+      return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName;
     }
     
-    const amountText = item.amounts.join(', ')
-    const otherRecipes = item.recipeCount - item.amounts.length
+    // Recipe items
+    const amountText = item.amounts.join(', ');
+    const otherRecipes = item.recipeCount - item.amounts.length;
+    const stapleFlag = item.isStaple ? ', staple' : '';
     
-    if (otherRecipes > 0) {
-      return `${item.itemName}: ${amountText} (+ ${otherRecipes} other recipe${otherRecipes > 1 ? 's' : ''})`
+    if (amountText && otherRecipes > 0) {
+      return `${item.itemName}: ${amountText} (+ ${otherRecipes} other recipe${otherRecipes > 1 ? 's' : ''}${stapleFlag})`;
+    } else if (amountText) {
+      return `${item.itemName}: ${amountText} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''}${stapleFlag})`;
+    } else {
+      return `${item.itemName} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''}${stapleFlag})`;
     }
-    
-    return `${item.itemName}: ${amountText} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''})`
-  }
+  };
 
   // Event handlers
   const handleExclusionToggle = (itemName: string) => {
