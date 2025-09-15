@@ -208,7 +208,7 @@ export function ShoppingList({
     const includedItems = groceryItems.filter(item => !excludedNames.has(item.itemName.toLowerCase()));
     
     const itemsText = includedItems
-      .map(item => `${item.itemName} ${item.amounts?.join(', ') || ''}`)
+      .map(item => formatItem(item))
       .join('\n');
     
     const encodedItems = encodeURIComponent(itemsText);
