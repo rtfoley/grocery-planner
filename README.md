@@ -99,7 +99,8 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Add one-click export to iOS Notes app for offline mobile shopping
 - [x] allow user to specify start and end date of a session
 - [ ] allow user to add extra meals that don't have a date specified
-- [ ] allow user to add sides on a day
+- [ ] allow user to add sides that are single ingredients
+- [ ] allow user to add sides that are recipes
 
 ### Splice 7: Deployment
 - [ ] Pi deployment setup
