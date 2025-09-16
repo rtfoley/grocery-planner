@@ -1,8 +1,8 @@
 // src/Components/MealPlanner.tsx
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { Title, Group, Button, Grid, Text, Stack } from '@mantine/core'
+import { useEffect, useState } from 'react'
+import { Title, Group, Button, Grid, Text, Stack, Modal } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
@@ -11,6 +11,7 @@ import { StaplesSelector } from './StaplesSelector'
 import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getActivePlanningSession, getAdhocItems, getItemExclusions, getMealAssignments, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
 import { Item, StapleStatus } from '@prisma/client'
+import { useDisclosure } from '@mantine/hooks'
 
 interface MealPlannerProps {
   recipes: RecipeWithItems[]
@@ -19,12 +20,16 @@ interface MealPlannerProps {
 
 export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   // State management
-  const [startDate, setStartDate] = useState<Date | null>(new Date())
+  const [dateRange, setDateRange] = useState<[string | null, string | null]>([null, null]);
+  const [startDate, setStartDate] = useState<Date | null>();
+  const [endDate, setEndDate] = useState<Date | null>();
   const [planningSessionId, setPlanningSessionId] = useState<number | undefined>();
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
   const [adHocItems, setAdHocItems] = useState<AdhocItemWithItem[]>([])
+
+  const [opened, { open, close }] = useDisclosure(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -53,20 +58,30 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     fetchData();
   }, [])
 
+  const getDaysBetween = (start: Date, end: Date): number => {
+    const oneDay = 24 * 60 * 60 * 1000;
+    return Math.ceil((end.getTime() - start.getTime()) / oneDay) + 1; // +1 to include both dates
+  };
+
   const startNewSession = async () => {
-    if(!startDate)
-    {
+    if (!dateRange || !dateRange[0] || !dateRange[1]) {
       return;
     }
 
+    const start = new Date(dateRange[0] + 'T00:00:00');
+    const end = new Date(dateRange[1] + 'T00:00:00');
+    console.log(`Creating session from ${start} - ${end}`);
+
+    const dayCount = getDaysBetween(start, end);
+
     //// TODO add loading spinner
-    const planningSession = await createPlanningSession(startDate);
+    const planningSession = await createPlanningSession(start);
     setPlanningSessionId(planningSession.id);
 
     const tempMealAssignments: MealAssignmentWithRecipe[] = [];
-    for (let i = 0; i < 14; i++) {
-      const date = new Date(startDate); // Copy the full date
-      date.setDate(startDate.getDate() + i); // Add days to original day
+    for (let i = 0; i < dayCount; i++) {
+      const date = new Date(start.getTime() + (i * 24 * 60 * 60 * 1000));
+      console.log(`Adding meal slot for ${date}, ${start} + ${i} days`);
       const assignment: MealAssignmentWithRecipe = await createMealAssignment(planningSession.id, null, date);
       tempMealAssignments.push(assignment);
     }
@@ -83,18 +98,12 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
     setStapleSelections(tempStapleSelections);
     setExcludedItems([]);
+
+    setStartDate(start);
+    setEndDate(end);
+    setDateRange([null, null]);
+    close();
   };
-
-  const endDate = useMemo(() => {
-    if (!startDate)
-    {
-      return new Date();
-    }
-
-    const date = new Date(startDate);
-    date.setDate(startDate.getDate() + 14);
-    return date;
-  }, [startDate])
 
   const excludeItem = async (itemId: number) => {
     if(planningSessionId === null)
@@ -167,12 +176,59 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     .map(assignment => recipes.find(r => r.id === assignment.recipe_id)!)
     .filter(Boolean)
 
+  const openModal = () => {
+    setDateRange([null, null]);
+    open();
+  }
+
   return (
     <Stack gap="xl">
+      <Modal opened={opened} onClose={close} title="New Session" centered
+        closeOnEscape={false}
+        closeOnClickOutside={false}
+        size="md">
+        <Stack gap="lg">
+          <DatePickerInput
+            type="range"
+            label="Pick dates range"
+            placeholder="Select start and end dates"
+            value={dateRange}
+            onChange={(value) => {
+              console.log('DatePicker onChange:', value);
+              setDateRange(value);
+            }}
+            leftSection={<IconCalendar size={16} />}
+            clearable={false}
+            required
+            excludeDate={(date) => {
+              const input = new Date(date);
+              const yesterday = new Date();
+              yesterday.setDate(yesterday.getDate() - 1);
+              yesterday.setHours(0, 0, 0, 0);
+              return input < yesterday;
+            }}
+          />
+          
+          <Group justify="flex-end" gap="sm">
+            <Button 
+              variant="subtle" 
+              onClick={close}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={startNewSession}
+              disabled={!dateRange || dateRange.length !== 2 || !dateRange[0] || !dateRange[1]}
+            >
+              Create Session
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
       <Group justify="space-between" align="flex-end">
         <div>
           <Title order={1}>Meal Planning</Title>
-          {startDate && (
+          {startDate && endDate && (
             <Text c="dimmed">
               {startDate.toLocaleDateString('en-US', { 
                 month: 'long', 
@@ -185,16 +241,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
           )}
         </div>
         <Group align="flex-end">
-          <DatePickerInput
-            label="Start Date"
-            value={startDate}
-            onChange={(value: Date | null) => setStartDate(value)}
-            leftSection={<IconCalendar size={16} />}
-            clearable={false}
-            placeholder="Pick start date"
-            valueFormat="MMM D, YYYY"
-          />
-          <Button variant="light" onClick={startNewSession}>
+          <Button variant="light" onClick={openModal}>
             New Session
           </Button>
         </Group>
