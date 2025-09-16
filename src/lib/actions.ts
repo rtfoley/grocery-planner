@@ -193,11 +193,6 @@ export async function createPlanningSession(startDate: Date) {
 
 export async function getActivePlanningSession(): Promise<PlanningSession | null> {
   return await prisma.planningSession.findFirst({
-    where: {
-      start_date: {
-        lte: new Date()
-      }
-    },
     orderBy: {
       id: 'desc'
     },

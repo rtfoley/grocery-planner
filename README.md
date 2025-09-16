@@ -94,15 +94,19 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] handle duplicate items across recipes and staples within a shopping list
 - [ ] Session history and management
 
-### Splice 6: Deployment
+### Slice 6: Usability Improvements
+- [x] Deleting recipes
+- [x] Add one-click export to iOS Notes app for offline mobile shopping
+- [x] allow user to specify start and end date of a session
+- [ ] allow user to add extra meals that don't have a date specified
+- [ ] allow user to add sides on a day
+
+### Splice 7: Deployment
 - [ ] Pi deployment setup
 - [ ] PM2 process management configuration
 
 ### Other Features
-- [x] Deleting recipes
-- [x] Add one-click export to iOS Notes app for offline mobile shopping
-- [ ] allow user to specify start and end date of a session
-- [ ] allow user to add extra meals that don't have a date specified
+
 - [ ] allow for multiple store orders (i.e. different locations of the same chain)
 
 ## Installation & Development
