@@ -110,6 +110,10 @@ Streamlines the process of planning meals and generating grocery lists by:
 
 - [ ] allow for multiple store orders (i.e. different locations of the same chain)
 
+### Long-term cloud hosting
+- [ ] Migrate DB to Supabase, including support for multiple users/ families
+- [ ] Host frontend on Vercel, linked to Supabase
+
 ## Installation & Development
 
 ### Prerequisites
