@@ -75,6 +75,15 @@ CREATE TABLE meal_assignments (
   date DATE
 );
 
+-- Meal Side Items (single-ingredient sides for specific dates)
+CREATE TABLE meal_side_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
+  date DATE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  amount TEXT
+);
+
 -- Add index for common queries
 CREATE INDEX idx_meal_assignments_session ON meal_assignments(planning_session_id);
 CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, date);
@@ -82,7 +91,7 @@ CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, 
 -- Staple Selections
 CREATE TABLE staple_selections (
   planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   status staple_status NOT NULL DEFAULT 'PENDING',
   PRIMARY KEY (planning_session_id, item_id)
 );
@@ -90,7 +99,7 @@ CREATE TABLE staple_selections (
 -- Ad-hoc Items
 CREATE TABLE adhoc_items (
   planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   amount TEXT,
   PRIMARY KEY (planning_session_id, item_id)
 );
@@ -98,7 +107,7 @@ CREATE TABLE adhoc_items (
 -- Item Exclusions
 CREATE TABLE item_exclusions (
   planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE RESTRICT,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
   PRIMARY KEY (planning_session_id, item_id)
 );
 
@@ -115,6 +124,7 @@ ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE planning_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meal_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meal_side_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staple_selections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE adhoc_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_exclusions ENABLE ROW LEVEL SECURITY;
@@ -276,6 +286,19 @@ USING (
   )
 );
 
+-- Meal Side Items: Access via planning session
+CREATE POLICY "Group members manage meal side items"
+ON meal_side_items FOR ALL
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+
 -- Staple Selections: Access via planning session
 CREATE POLICY "Group members manage staple selections"
 ON staple_selections FOR ALL
@@ -328,6 +351,8 @@ CREATE INDEX idx_recipes_shopping_group ON recipes(shopping_group_id);
 CREATE INDEX idx_planning_sessions_shopping_group ON planning_sessions(shopping_group_id);
 CREATE INDEX idx_meal_assignments_session ON meal_assignments(planning_session_id);
 CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, date);
+CREATE INDEX idx_meal_side_items_session ON meal_side_items(planning_session_id);
+CREATE INDEX idx_meal_side_items_date ON meal_side_items(planning_session_id, date);
 CREATE INDEX idx_staple_selections_session ON staple_selections(planning_session_id);
 CREATE INDEX idx_adhoc_items_session ON adhoc_items(planning_session_id);
 CREATE INDEX idx_item_exclusions_session ON item_exclusions(planning_session_id);
