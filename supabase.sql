@@ -362,13 +362,13 @@ CREATE INDEX idx_item_exclusions_session ON item_exclusions(planning_session_id)
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION initialize_new_user()
-RETURNS TRIGGER AS $$
+RETURNS TRIGGER AS $
 DECLARE
   new_group_id UUID;
 BEGIN
   -- Create default shopping group
   INSERT INTO shopping_groups (name)
-  VALUES ('My Family')
+  VALUES ('My Shopping Group')
   RETURNING id INTO new_group_id;
   
   -- Add user as owner
@@ -377,7 +377,7 @@ BEGIN
   
   RETURN NEW;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger to auto-create group on user signup
 CREATE TRIGGER on_auth_user_created
