@@ -20,6 +20,17 @@ CREATE TABLE shopping_group_members (
   PRIMARY KEY (shopping_group_id, user_id)
 );
 
+-- Pending Invitations (invitation-only group access)
+CREATE TABLE pending_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  shopping_group_id UUID NOT NULL REFERENCES shopping_groups(id) ON DELETE CASCADE,
+  invited_email TEXT NOT NULL,
+  invited_by UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
+  UNIQUE (shopping_group_id, invited_email)
+);
+
 -- Items (group-scoped)
 CREATE TABLE items (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -92,6 +103,7 @@ CREATE TABLE item_exclusions (
 -- Enable RLS on all tables
 ALTER TABLE shopping_groups ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shopping_group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pending_invitations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_items ENABLE ROW LEVEL SECURITY;
@@ -146,10 +158,19 @@ USING (
 CREATE POLICY "Users can join groups"
 ON shopping_group_members FOR INSERT
 WITH CHECK (
-  user_id = auth.uid() OR
+  -- Owners can add members
   shopping_group_id IN (
     SELECT shopping_group_id FROM shopping_group_members
     WHERE user_id = auth.uid() AND role = 'owner'
+  ) OR
+  -- Users can accept their own invitations
+  (
+    user_id = auth.uid() AND
+    shopping_group_id IN (
+      SELECT shopping_group_id FROM pending_invitations
+      WHERE invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+        AND expires_at > NOW()
+    )
   )
 );
 
@@ -161,6 +182,36 @@ USING (
     SELECT shopping_group_id FROM shopping_group_members
     WHERE user_id = auth.uid() AND role = 'owner'
   )
+);
+
+-- Pending Invitations: Manage invitations
+CREATE POLICY "Users see relevant invitations"
+ON pending_invitations FOR SELECT
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = auth.uid() AND role = 'owner'
+  ) OR
+  invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
+);
+
+CREATE POLICY "Owners can invite members"
+ON pending_invitations FOR INSERT
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = auth.uid() AND role = 'owner'
+  )
+);
+
+CREATE POLICY "Owners and invitees can delete invitations"
+ON pending_invitations FOR DELETE
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = auth.uid() AND role = 'owner'
+  ) OR
+  invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
 );
 
 -- Items: Group members have full access
