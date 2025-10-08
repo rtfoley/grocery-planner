@@ -62,16 +62,22 @@ CREATE TABLE planning_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   shopping_group_id UUID NOT NULL REFERENCES shopping_groups(id) ON DELETE CASCADE,
   start_date DATE NOT NULL,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  end_date DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CHECK (end_date >= start_date)
 );
 
 -- Meal Assignments
 CREATE TABLE meal_assignments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
   recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,
-  date DATE NOT NULL,
-  PRIMARY KEY (planning_session_id, date)
+  date DATE
 );
+
+-- Add index for common queries
+CREATE INDEX idx_meal_assignments_session ON meal_assignments(planning_session_id);
+CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, date);
 
 -- Staple Selections
 CREATE TABLE staple_selections (
@@ -315,10 +321,13 @@ USING (
 
 CREATE INDEX idx_shopping_group_members_user ON shopping_group_members(user_id);
 CREATE INDEX idx_shopping_group_members_group ON shopping_group_members(shopping_group_id);
+CREATE INDEX idx_pending_invitations_email ON pending_invitations(invited_email);
+CREATE INDEX idx_pending_invitations_group ON pending_invitations(shopping_group_id);
 CREATE INDEX idx_items_shopping_group ON items(shopping_group_id);
 CREATE INDEX idx_recipes_shopping_group ON recipes(shopping_group_id);
 CREATE INDEX idx_planning_sessions_shopping_group ON planning_sessions(shopping_group_id);
 CREATE INDEX idx_meal_assignments_session ON meal_assignments(planning_session_id);
+CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, date);
 CREATE INDEX idx_staple_selections_session ON staple_selections(planning_session_id);
 CREATE INDEX idx_adhoc_items_session ON adhoc_items(planning_session_id);
 CREATE INDEX idx_item_exclusions_session ON item_exclusions(planning_session_id);
