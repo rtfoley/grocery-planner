@@ -465,21 +465,20 @@ if (error) {
 ## Implementation Checklist
 
 ### Phase 1: Infrastructure
-- [ ] Set up Supabase project
-- [ ] Run migration SQL script
+- [x] Set up Supabase project
+- [x] Run migration SQL script
 - [ ] Configure environment variables
 - [ ] Add Supabase dependencies
 
 ### Phase 2: Authentication
 - [ ] Create login/signup pages
 - [ ] Add auth guards to all routes
-- [ ] Implement session management
+- [ ] Implement user session management
 - [ ] Test onboarding flow
 
 ### Phase 3: Multi-Tenancy
-- [ ] Add shopping group context
-- [ ] Create group selector UI
-- [ ] Update all queries to filter by group
+- [ ] Fetch and save user group on login, make available throughout
+- [ ] Update all queries to filter by group and use Supabase models/ types
 - [ ] Test data isolation
 
 ### Phase 4: Invitations
