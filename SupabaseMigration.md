@@ -1,8 +1,36 @@
-# Supabase Migration: Application Changes Guide
+Migration: Complete Implementation Guide
 
 ## Overview
 
-This document outlines the high-level application changes required when migrating from SQLite (local Pi deployment) to Supabase (cloud-hosted with multi-tenancy). The focus is on functional and architectural changes, not SQL syntax.
+This document outlines the complete application changes required when migrating from SQLite (local Pi deployment) to Supabase (cloud-hosted with multi-tenancy). This guide includes functional changes, architectural decisions, implementation patterns, and testing strategies.
+
+---
+
+## Simplification Decisions
+
+Based on initial requirements analysis, the following simplifications have been made to reduce complexity:
+
+### Single Group Per User (Simplified)
+- **Decision:** Assume each user belongs to only one shopping group
+- **Impact:** No group selector UI needed, no group switching logic
+- **Implementation:** Fetch user's single group on login, use throughout app
+- **Future:** Data model supports multiple groups if needed later
+
+### Meal Side Items (Kept)
+- **Decision:** Keep `meal_side_items` table for date-specific single ingredients
+- **Rationale:** Supports realistic meal planning where sides need specific dates (e.g., "green beans Tuesday")
+- **Impact:** Adds one table but enables key use case not covered by ad-hoc items
+- **Use case:** Single-ingredient sides per date without creating full recipes
+
+### Store Ordering (Deferred)
+- **Decision:** Keep single `store_order_index` approach from SQLite
+- **Impact:** No multi-store support in initial migration
+- **Future:** Can add store table later if users need multiple store layouts
+
+### Permissions (Kept)
+- **Decision:** Maintain owner/member role distinction
+- **Rationale:** Prevents accidental deletions, enables proper member management
+- **Impact:** Minimal complexity for important safety feature
 
 ---
 
@@ -17,34 +45,77 @@ This document outlines the high-level application changes required when migratin
 - Multiple families can use the same system
 - Each family has their own isolated "Shopping Group"
 - All data is scoped to shopping groups
-- Users can belong to multiple shopping groups
+- Users belong to one shopping group (simplified)
 
 ### Application Changes Required
 
-#### User Context Management
+#### Single Group Hook
 ```typescript
-// New: Track active shopping group
-const [activeGroupId, setActiveGroupId] = useState<string>();
+// lib/hooks/useUserGroup.ts
+'use client'
 
-// All queries must filter by shopping group
-const { data: items } = await supabase
-  .from('items')
-  .select('*')
-  .eq('shopping_group_id', activeGroupId);
+import { useSession } from '@supabase/auth-helpers-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
+
+export function useUserGroup() {
+  const session = useSession();
+  const [groupId, setGroupId] = useState<string | null>(null);
+  const [groupName, setGroupName] = useState<string>('');
+  const [userRole, setUserRole] = useState<'owner' | 'member'>('member');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadGroup() {
+      if (!session?.user) {
+        setIsLoading(false);
+        return;
+      }
+
+      const { data } = await supabase
+        .from('shopping_group_members')
+        .select('shopping_group_id, role, shopping_groups(name)')
+        .eq('user_id', session.user.id)
+        .single(); // Assumes only one group
+
+      if (data) {
+        setGroupId(data.shopping_group_id);
+        setGroupName(data.shopping_groups.name);
+        setUserRole(data.role);
+      }
+
+      setIsLoading(false);
+    }
+
+    loadGroup();
+  }, [session]);
+
+  return { groupId, groupName, userRole, isLoading };
+}
 ```
 
-#### Group Selection UI
-- Add group selector dropdown in main navigation
-- Show group name in header/title
-- Store active group preference in user settings
-- Handle switching between groups
+#### Usage in Components
+```typescript
+// All queries must filter by shopping group
+function RecipesList() {
+  const { groupId, isLoading } = useUserGroup();
+
+  if (isLoading) return <Loader />;
+
+  const { data: recipes } = await supabase
+    .from('recipes')
+    .select('*')
+    .eq('shopping_group_id', groupId);
+
+  return <RecipeList recipes={recipes} />;
+}
+```
 
 #### Shopping Group Management
 **New pages/features needed:**
-- `/settings/groups` - List user's shopping groups
-- Group creation flow
-- Group settings (rename, delete)
-- Member management interface
+- `/settings/groups` - Group settings and member management
+- Group rename functionality
+- Member invitation interface
 
 ---
 
@@ -65,20 +136,56 @@ const { data: items } = await supabase
 **New pages needed:**
 - `/login` - Email/password login
 - `/signup` - New account creation
-- `/forgot-password` - Password reset
+- `/forgot-password` - Password reset (optional)
 
 **Integration points:**
 ```typescript
-// Wrap app in auth provider
+// app/layout.tsx - Wrap app in auth provider
 import { SessionContextProvider } from '@supabase/auth-helpers-react'
 
-// Protect routes
-if (!session) {
-  redirect('/login');
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <SessionContextProvider supabaseClient={supabase}>
+          <MantineProvider>
+            {children}
+          </MantineProvider>
+        </SessionContextProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+#### Auth Guard Pattern
+```typescript
+// middleware.ts
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs'
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export async function middleware(req: NextRequest) {
+  const res = NextResponse.next()
+  const supabase = createMiddlewareClient({ req, res })
+  const { data: { session } } = await supabase.auth.getSession()
+
+  // Redirect to login if not authenticated
+  if (!session && !req.nextUrl.pathname.startsWith('/login') && !req.nextUrl.pathname.startsWith('/signup')) {
+    return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  // Redirect to home if already authenticated and on auth pages
+  if (session && (req.nextUrl.pathname.startsWith('/login') || req.nextUrl.pathname.startsWith('/signup'))) {
+    return NextResponse.redirect(new URL('/', req.url))
+  }
+
+  return res
 }
 
-// Get current user
-const { data: { user } } = await supabase.auth.getUser();
+export const config = {
+  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)']
+}
 ```
 
 #### Onboarding Flow
@@ -104,49 +211,82 @@ const { data: { user } } = await supabase.auth.getUser();
 
 #### Invitation Creation
 **New UI components:**
-- "Invite Member" button in group settings
+- "Invite Member" button in group settings (owners only)
 - Modal with email input field
-- Invitation link/code generation
 
 **Implementation:**
 ```typescript
 async function inviteMember(email: string) {
-  await supabase
+  const { groupId } = useUserGroup();
+  const session = useSession();
+
+  const { error } = await supabase
     .from('pending_invitations')
     .insert({
-      shopping_group_id: activeGroupId,
+      shopping_group_id: groupId,
       invited_email: email,
-      invited_by: user.id
+      invited_by: session.user.id
     });
-  
-  // Send email notification (external service or Supabase function)
-  await sendInvitationEmail(email, activeGroupId);
+
+  if (error) {
+    if (error.code === '23505') {
+      showError('This email has already been invited');
+    } else {
+      showError('Failed to send invitation');
+    }
+  } else {
+    showSuccess('Invitation sent!');
+    // Optional: Send email notification via external service
+  }
 }
 ```
 
 #### Invitation Acceptance
 **New UI components:**
-- "Pending Invitations" banner/page
+- "Pending Invitations" banner on home page
 - Accept/decline buttons
-- Invitation list view
 
 **Implementation:**
 ```typescript
 async function acceptInvitation(invitationId: string, groupId: string) {
+  const session = useSession();
+
   // Join group
-  await supabase
+  const { error: joinError } = await supabase
     .from('shopping_group_members')
     .insert({
       shopping_group_id: groupId,
-      user_id: user.id,
+      user_id: session.user.id,
       role: 'member'
     });
-  
+
+  if (joinError) {
+    showError('Failed to join group');
+    return;
+  }
+
   // Clean up invitation
   await supabase
     .from('pending_invitations')
     .delete()
     .eq('id', invitationId);
+
+  showSuccess('Joined group successfully!');
+  // Refresh to load new group
+  window.location.reload();
+}
+
+// Check for pending invitations
+async function getPendingInvitations() {
+  const session = useSession();
+  
+  const { data } = await supabase
+    .from('pending_invitations')
+    .select('*, shopping_groups(name)')
+    .eq('invited_email', session.user.email)
+    .gt('expires_at', new Date().toISOString());
+
+  return data;
 }
 ```
 
@@ -230,24 +370,30 @@ await supabase
 
 #### UI Components
 **Meal planning page:**
-- Add "Add Side Item" button per date
-- Modal/input for selecting item + amount
-- Display side items alongside recipe assignments
-- Remove side item button
+- Add "Add Side" button per date (next to meal assignments)
+- Modal/dropdown for selecting item + amount input
+- Display side items alongside recipe assignments for each date
+- Remove side item button (X icon)
 
 **Shopping list generation:**
-- Query meal_side_items along with recipe items
-- Aggregate amounts across all sources
-
 ```typescript
-// Shopping list sources (updated)
+// Aggregate from multiple sources
 const shoppingItems = [
   ...recipeItems,        // From recipes via meal assignments
-  ...mealSideItems,      // New: single-ingredient sides per date
+  ...mealSideItems,      // Date-specific single-ingredient sides
   ...stapleSelections,   // Session-wide staples
   ...adHocItems          // Session-wide extras
 ];
 ```
+
+### Key Differences from Ad-hoc Items
+
+| Feature | Meal Side Items | Ad-hoc Items |
+|---------|----------------|--------------|
+| **Date specificity** | Per-date or undated | Session-wide only |
+| **Purpose** | Part of meal plan | Extra shopping list items |
+| **Visibility** | Shown with meal assignments | Separate section |
+| **Use case** | "Green beans Tuesday" | "Paper towels this week" |
 
 ---
 
@@ -266,15 +412,9 @@ const shoppingItems = [
 
 #### Role Checks
 ```typescript
-// Get user's role in current group
-const { data: membership } = await supabase
-  .from('shopping_group_members')
-  .select('role')
-  .eq('shopping_group_id', activeGroupId)
-  .eq('user_id', user.id)
-  .single();
-
-const isOwner = membership?.role === 'owner';
+// Using the hook
+const { userRole } = useUserGroup();
+const isOwner = userRole === 'owner';
 ```
 
 #### UI Conditional Rendering
@@ -282,8 +422,8 @@ const isOwner = membership?.role === 'owner';
 // Show owner-only features
 {isOwner && (
   <>
-    <Button onClick={inviteMember}>Invite Member</Button>
-    <Button onClick={deleteGroup}>Delete Group</Button>
+    <Button onClick={openInviteModal}>Invite Member</Button>
+    <Button onClick={deleteGroup} color="red">Delete Group</Button>
   </>
 )}
 ```
@@ -302,7 +442,7 @@ const isOwner = membership?.role === 'owner';
 
 ---
 
-## 7. Query Pattern Changes
+## 6. Query Pattern Changes
 
 ### Current State (Prisma)
 ```typescript
@@ -314,16 +454,18 @@ const recipes = await prisma.recipe.findMany();
 ### New State (Supabase)
 ```typescript
 // Must filter by shopping_group_id
+const { groupId } = useUserGroup();
+
 const { data: items } = await supabase
   .from('items')
   .select('*')
-  .eq('shopping_group_id', activeGroupId);
+  .eq('shopping_group_id', groupId);
 
 // RLS automatically filters, but explicit is clearer
 const { data: recipes } = await supabase
   .from('recipes')
   .select('*')
-  .eq('shopping_group_id', activeGroupId);
+  .eq('shopping_group_id', groupId);
 ```
 
 ### Composite Key Changes
@@ -347,14 +489,20 @@ where: {
 
 ---
 
-## 8. Environment & Configuration
+## Implementation Patterns
+
+### Type Generation
+Generate TypeScript types from Supabase schema
+Run: `npx supabase gen types typescript --project-id [project-id] > lib/database.types.ts`
+
+## Environment & Configuration
 
 ### New Environment Variables Required
 ```env
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=https://yourproject.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_key  # Server-side only
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...  # Server-side only
 
 # Remove old SQLite
 # DATABASE_URL=file:./data/app.db
@@ -374,75 +522,85 @@ npm uninstall @prisma/client prisma
 
 ---
 
-## 9. Page & Route Changes
+## Recommended File Structure
 
-### New Pages Required
-- `/login` - User login
-- `/signup` - User registration  
-- `/settings/groups` - Shopping group management
-- `/settings/profile` - User profile settings
-- `/invitations` - Pending invitations (or banner on home page)
-
-### Updated Pages
-- `/` (Home) - Add group selector, check authentication
-- `/recipes` - Filter by active group
-- `/items` - Filter by active group
-- `/store-order` - Filter by active group
-- All pages need auth guards
-
----
-
-## 10. Error Handling
-
-### New Error Scenarios
-- **Unauthenticated:** User not logged in
-- **Unauthorized:** User not in shopping group
-- **Expired invitation:** Invitation older than 7 days
-- **Duplicate invitation:** Email already invited to group
-- **Last owner:** Cannot remove last owner from group
-- **RLS violations:** Attempting cross-group access
-
-### Error Handling Strategy
-```typescript
-// Supabase returns errors in response
-const { data, error } = await supabase
-  .from('items')
-  .insert({ ... });
-
-if (error) {
-  if (error.code === 'PGRST116') {
-    // RLS violation - user not authorized
-    showError('You do not have access to this resource');
-  } else if (error.code === '23505') {
-    // Unique constraint violation
-    showError('This item already exists');
-  }
-}
+```
+src/
+├── app/
+│   ├── (auth)/
+│   │   ├── login/
+│   │   │   └── page.tsx
+│   │   └── signup/
+│   │       └── page.tsx
+│   ├── (authenticated)/
+│   │   ├── layout.tsx          # Auth guard wrapper
+│   │   ├── page.tsx            # Home / Meal Planning
+│   │   ├── recipes/
+│   │   │   ├── page.tsx
+│   │   │   ├── new/
+│   │   │   └── [id]/
+│   │   ├── items/
+│   │   │   └── page.tsx
+│   │   ├── store-order/
+│   │   │   └── page.tsx
+│   │   └── settings/
+│   │       └── groups/
+│   │           └── page.tsx
+│   └── layout.tsx              # Root layout with providers
+├── components/
+│   ├── auth/
+│   │   ├── LoginForm.tsx
+│   │   └── SignupForm.tsx
+│   ├── groups/
+│   │   ├── InvitationList.tsx
+│   │   ├── MemberList.tsx
+│   │   └── InviteMemberModal.tsx
+│   ├── MealPlanner.tsx
+│   ├── ShoppingList.tsx
+│   ├── Navigation.tsx
+│   └── [other existing components]
+├── lib/
+│   ├── supabase.ts            # Client initialization
+│   ├── database.types.ts      # Generated types
+│   ├── hooks/
+│   │   ├── useUserGroup.ts
+│   │   └── useAuth.ts
+│   └── actions/               # Server actions (convert from Prisma)
+│       ├── items.ts
+│       ├── recipes.ts
+│       ├── sessions.ts
+│       └── groups.ts
+└── middleware.ts              # Auth guard
 ```
 
 ---
 
-## 11. Testing Considerations
+## Page & Route Changes
 
-### Multi-User Testing
-- Test with multiple user accounts
-- Verify data isolation between groups
-- Test group switching functionality
-- Verify invitation acceptance flow
+### New Pages Required
+- `/login` - User login
+- `/signup` - User registration  
+- `/settings/groups` - Shopping group management and member list
+- Optional: `/forgot-password` - Password reset
 
-### Permission Testing
-- Test owner vs member capabilities
-- Verify RLS prevents unauthorized access
-- Test edge cases (last owner, expired invitations)
+### Updated Pages
+- `/` (Home) - Check authentication, display group name
+- `/recipes` - Filter by active group
+- `/items` - Filter by active group
+- `/store-order` - Filter by active group
+- All pages need auth guards (via middleware)
 
-### Migration Testing
-- No data migration needed (fresh start)
-- Test onboarding flow thoroughly
-- Verify auto-group creation on signup
+### Route Protection Strategy
+```typescript
+// Use route groups for clean organization
+app/
+  (auth)/          # Public routes - login, signup
+  (authenticated)/ # Protected routes - everything else
+```
 
 ---
 
-## 12. Deployment Changes
+## Deployment Changes
 
 ### Current Deployment (Pi)
 - Local database on Pi
@@ -450,54 +608,82 @@ if (error) {
 - PM2 process management
 
 ### New Deployment (Supabase)
-- Cloud-hosted database
-- Internet required
-- Can deploy frontend anywhere (Vercel, Netlify, Pi)
-- Database managed by Supabase
+- Cloud-hosted database (Supabase)
+- Internet required for all operations
+- Can deploy frontend anywhere (Vercel, Netlify, or keep on Pi)
+- Database managed by Supabase (auto-backups, scaling)
 
 ### Deployment Options
-1. **Full cloud:** Frontend on Vercel + Supabase backend
+1. **Full cloud:** Frontend on Vercel + Supabase backend (recommended)
 2. **Hybrid:** Frontend on Pi + Supabase backend (still requires internet)
-3. **Development:** Local Next.js dev server + Supabase
+3. **Development:** Local Next.js dev server + Supabase cloud database
 
 ---
 
 ## Implementation Checklist
 
 ### Phase 1: Infrastructure
-- [x] Set up Supabase project
-- [x] Run migration SQL script
-- [ ] Configure environment variables
-- [ ] Add Supabase dependencies
+- [x] Set up Supabase project at supabase.com
+- [x] Run SQL migration script in Supabase SQL Editor
+- [ ] Copy connection details (URL, anon key, service role key)
+- [ ] Create `.env.local` with Supabase credentials
+- [ ] Install Supabase dependencies
+- [ ] Remove Prisma dependencies
+- [ ] Generate TypeScript types from Supabase schema
 
 ### Phase 2: Authentication
-- [ ] Create login/signup pages
-- [ ] Add auth guards to all routes
-- [ ] Implement user session management
-- [ ] Test onboarding flow
+- [ ] Create `/login` page with email/password form
+- [ ] Create `/signup` page with email/password form
+- [ ] Set up SessionContextProvider in root layout
+- [ ] Create auth middleware for route protection
+- [ ] Test signup flow (verify auto-group creation)
+- [ ] Test login flow
+- [ ] Test auth guards (accessing protected routes when logged out)
 
 ### Phase 3: Multi-Tenancy
-- [ ] Fetch and save user group on login, make available throughout
-- [ ] Update all queries to filter by group and use Supabase models/ types
-- [ ] Test data isolation
+- [ ] Create `useUserGroup` hook
+- [ ] Update all existing queries to filter by `shopping_group_id`
+- [ ] Convert all Prisma queries to Supabase
+- [ ] Update TypeScript types from `number` to `string` for IDs
+- [ ] Test data isolation (create 2 users, verify separation)
+- [ ] Display group name in navigation/header
 
 ### Phase 4: Invitations
-- [ ] Create invitation UI
-- [ ] Implement invitation acceptance
-- [ ] Add member management
-- [ ] Test invitation flows
+- [ ] Create `/settings/groups` page
+- [ ] Build invitation creation UI (owners only)
+- [ ] Build pending invitations banner/list
+- [ ] Implement accept/decline invitation logic
+- [ ] Build member list UI
+- [ ] Implement remove member functionality (owners only)
+- [ ] Test complete invitation flow end-to-end
 
 ### Phase 5: New Features
-- [ ] Implement meal side items
-- [ ] Update shopping list aggregation
-- [ ] Add flexible date range selection
+- [ ] Implement meal side items UI
+  - [ ] Add "Add Side Item" button per date in meal planner
+  - [ ] Create item selector modal with amount input
+  - [ ] Display side items alongside meal assignments
+  - [ ] Implement remove side item functionality
+- [ ] Update shopping list aggregation to include meal_side_items
+- [ ] Add flexible date range selection in New Session modal
 - [ ] Update meal assignment logic for multiple meals/date
+- [ ] Test undated meals functionality
 
 ### Phase 6: Testing & Polish
-- [ ] Multi-user testing
-- [ ] Permission testing
+- [ ] Multi-user data isolation testing
+- [ ] Permission boundary testing
+- [ ] Invitation flow testing
+- [ ] Date range and multiple meals testing
 - [ ] Error handling refinement
-- [ ] Performance optimization
+- [ ] Loading states for async operations
+- [ ] Mobile responsiveness check
+
+### Phase 7: Mobile Shopping List
+- [ ] Add new view/ page that for using shopping list at a store
+- [ ] mark an item as purchased
+- [ ] mark an item as unavailable
+- [ ] option to group items by status (pending, purchased, unavilable)
+- [ ] progress indicators
+- [ ] When making a new planning session, offer to bring in unavailable items from previous session
 
 ---
 
@@ -505,18 +691,70 @@ if (error) {
 
 1. **From single-tenant to multi-tenant:** All data now scoped to shopping groups
 2. **From local to cloud:** Database hosted remotely, requires internet
-3. **From unauthenticated to authenticated:** User accounts required
-4. **From implicit to explicit permissions:** Role-based access control
+3. **From unauthenticated to authenticated:** User accounts required for access
+4. **From implicit to explicit permissions:** Role-based access control (owner/member)
 5. **From direct DB access to RLS-filtered:** Security enforced at database level
-6. **From integer IDs to UUIDs:** Better for distributed systems
-7. **From rigid meal structure to flexible:** Multiple meals per date, undated meals
+6. **From integer IDs to UUIDs:** Better for distributed systems, more secure
+7. **From rigid meal structure to flexible:** Multiple meals per date, undated meals supported
 
 ---
 
-## Notes
+## Testing & Validation
 
-- RLS policies automatically filter queries, but explicit filtering is recommended for clarity
-- The invitation system prevents unauthorized group access
-- Auto-initialization ensures smooth onboarding
-- All existing features remain functional with proper group context
-- The meal side items feature addresses the single-ingredient sides use case
+### Critical Test Scenarios
+
+**Data Isolation**
+1. Create two user accounts → Each creates items/recipes with same names
+2. Verify User A cannot see User B's data
+3. Verify shopping lists don't mix items
+
+**Invitation Flow**
+1. Owner sends invitation → Invited user signs up → Accept invitation
+2. Verify access to group data after acceptance
+3. Verify invitation removed from pending table
+4. New member creates item → Verify owner can see it
+
+**Permission Boundaries**
+1. Login as member → Verify cannot invite/delete (UI hidden + API blocked)
+2. Login as owner → Verify these actions work
+
+**Multiple Meals & Date Ranges**
+1. Add 3 recipes to same date → Verify all show, shopping list aggregates correctly
+2. Create sessions with varying ranges (5 days, 21 days) → Verify meal slots match
+3. Test undated meals appear separately but contribute to shopping list
+
+### Migration Validation Checklist
+
+**Pre-Migration**
+- [ ] Supabase project created and configured
+- [ ] SQL script reviewed
+- [ ] Environment variables documented
+
+**Post-Migration**
+- [ ] All tables created successfully
+- [ ] RLS policies active on all tables
+- [ ] Trigger creates group on signup
+- [ ] Test user has default group
+
+**Feature Validation**
+- [ ] Login/signup works
+- [ ] Can create items, recipes, sessions (all scoped to group)
+- [ ] Can assign multiple meals to same date
+- [ ] Can manage staples and ad-hoc items
+- [ ] Shopping list generates correctly
+- [ ] Can invite members (owner only)
+- [ ] Can accept invitations
+- [ ] Item/recipe deletion works correctly
+
+**Security**
+- [ ] Cannot access other user's data
+- [ ] Cannot join group without invitation
+- [ ] Member cannot perform owner actions
+- [ ] RLS blocks unauthorized queries
+- [ ] Expired invitations don't work
+
+**Performance**
+- [ ] Queries under 500ms
+- [ ] No N+1 query problems
+- [ ] Indexes on foreign keys
+- [ ] Shopping list generation fast
