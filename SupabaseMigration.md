@@ -625,10 +625,10 @@ app/
 ### Phase 1: Infrastructure
 - [x] Set up Supabase project at supabase.com
 - [x] Run SQL migration script in Supabase SQL Editor
-- [ ] Copy connection details (URL, anon key, service role key)
-- [ ] Create `.env.local` with Supabase credentials
-- [ ] Install Supabase dependencies
-- [ ] Generate TypeScript types from Supabase schema
+- [x] Copy connection details (URL, anon key, service role key)
+- [x] Create `.env.local` with Supabase credentials
+- [x] Install Supabase dependencies
+- [x] Generate TypeScript types from Supabase schema
 
 ### Phase 2: Authentication
 - [ ] Create `/login` page with email/password form
