@@ -2,9 +2,14 @@
 import type { Metadata } from 'next'
 import { ColorSchemeScript, MantineProvider } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
+import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
+import '@mantine/notifications/styles.css'
 import { Navigation } from '@/Components/Navigation'
+import { supabase } from '@/lib/supabase'
+import { Notifications } from '@mantine/notifications'
+import { Providers } from '@/Components/Providers'
 
 export const metadata: Metadata = {
   title: 'Grocery Planner',
@@ -22,12 +27,10 @@ export default function RootLayout({
         <ColorSchemeScript />
       </head>
       <body>
-        <MantineProvider defaultColorScheme="auto">
-          <DatesProvider settings={{ firstDayOfWeek: 0 }}>
-            <Navigation />
-            {children}
-          </DatesProvider>
-        </MantineProvider>
+        <Providers>
+          <Navigation />
+          {children}
+        </Providers>
       </body>
     </html>
   )

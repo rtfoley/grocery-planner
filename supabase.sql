@@ -361,18 +361,17 @@ CREATE INDEX idx_item_exclusions_session ON item_exclusions(planning_session_id)
 -- HELPER FUNCTION: Initialize new user with default shopping group
 -- ============================================================================
 
-CREATE OR REPLACE FUNCTION initialize_new_user()
+CREATE OR REPLACE FUNCTION public.initialize_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   new_group_id UUID;
 BEGIN
-  -- Create default shopping group
-  INSERT INTO shopping_groups (name)
+  -- Explicitly use public schema
+  INSERT INTO public.shopping_groups (name)
   VALUES ('My Shopping Group')
   RETURNING id INTO new_group_id;
   
-  -- Add user as owner
-  INSERT INTO shopping_group_members (shopping_group_id, user_id, role)
+  INSERT INTO public.shopping_group_members (shopping_group_id, user_id, role)
   VALUES (new_group_id, NEW.id, 'owner');
   
   RETURN NEW;
