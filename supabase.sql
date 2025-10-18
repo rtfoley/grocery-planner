@@ -397,3 +397,32 @@ CREATE TRIGGER on_auth_user_created
 -- All users will automatically get a default shopping group on signup
 -- RLS policies enforce data isolation between groups
 -- Group members can collaborate on meal planning within their group
+
+-- Shopping Item Status (for in-store tracking)
+CREATE TABLE shopping_item_status (
+  planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN ('purchased', 'unavailable')),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (planning_session_id, item_id)
+);
+
+-- Enable RLS (add to the section with other ENABLE statements)
+ALTER TABLE shopping_item_status ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policy (add to the policies section)
+CREATE POLICY "Group members manage shopping status"
+ON shopping_item_status FOR ALL
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = auth.uid()
+    )
+  )
+);
+
+-- Index (add to the indexes section)
+CREATE INDEX idx_shopping_item_status_session ON shopping_item_status(planning_session_id);
+CREATE INDEX idx_shopping_item_status_status ON shopping_item_status(planning_session_id, status);

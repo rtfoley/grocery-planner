@@ -628,7 +628,6 @@ app/
 - [ ] Copy connection details (URL, anon key, service role key)
 - [ ] Create `.env.local` with Supabase credentials
 - [ ] Install Supabase dependencies
-- [ ] Remove Prisma dependencies
 - [ ] Generate TypeScript types from Supabase schema
 
 ### Phase 2: Authentication
@@ -643,12 +642,43 @@ app/
 ### Phase 3: Multi-Tenancy
 - [ ] Create `useUserGroup` hook
 - [ ] Update all existing queries to filter by `shopping_group_id`
+- [ ] Update server actions to accept and use groupId
 - [ ] Convert all Prisma queries to Supabase
+- [ ] Remove Prisma dependencies
 - [ ] Update TypeScript types from `number` to `string` for IDs
 - [ ] Test data isolation (create 2 users, verify separation)
 - [ ] Display group name in navigation/header
 
-### Phase 4: Invitations
+### Phase 4: New Core Features
+- [ ] Add flexible date range selection in New Session modal
+- [ ] Remove hardcoded 14-day session logic
+- [ ] Fix date timezone parsing (append T00:00:00)
+- [ ] Update meal assignment logic for multiple meals/date
+- [ ] Test undated meals functionality
+
+### Phase 5: Meal side items
+- [ ] Add "Add Side Item" button per date in meal planner
+- [ ] Create item selector modal with amount input
+- [ ] Display side items alongside meal assignments
+- [ ] Implement remove side item functionality
+- [ ] Update shopping list aggregation to include meal_side_items
+
+### Phase 6: Mobile Shopping List
+- [ ] Add new view/ page that for using shopping list at a store
+- [ ] mark an item as purchased
+- [ ] mark an item as unavailable
+- [ ] option to group items by status (pending, purchased, unavilable)
+- [ ] progress indicators
+- [ ] When making a new planning session, offer to bring in unavailable items from previous session
+
+### Phase 7: Testing & Polish
+- [ ] Multi-user data isolation testing
+- [ ] Date range and multiple meals testing
+- [ ] Error handling refinement
+- [ ] Loading states for async operations
+- [ ] Mobile responsiveness check
+
+### Phase 8: Invitations
 - [ ] Create `/settings/groups` page
 - [ ] Build invitation creation UI (owners only)
 - [ ] Build pending invitations banner/list
@@ -656,34 +686,7 @@ app/
 - [ ] Build member list UI
 - [ ] Implement remove member functionality (owners only)
 - [ ] Test complete invitation flow end-to-end
-
-### Phase 5: New Features
-- [ ] Implement meal side items UI
-  - [ ] Add "Add Side Item" button per date in meal planner
-  - [ ] Create item selector modal with amount input
-  - [ ] Display side items alongside meal assignments
-  - [ ] Implement remove side item functionality
-- [ ] Update shopping list aggregation to include meal_side_items
-- [ ] Add flexible date range selection in New Session modal
-- [ ] Update meal assignment logic for multiple meals/date
-- [ ] Test undated meals functionality
-
-### Phase 6: Testing & Polish
-- [ ] Multi-user data isolation testing
 - [ ] Permission boundary testing
-- [ ] Invitation flow testing
-- [ ] Date range and multiple meals testing
-- [ ] Error handling refinement
-- [ ] Loading states for async operations
-- [ ] Mobile responsiveness check
-
-### Phase 7: Mobile Shopping List
-- [ ] Add new view/ page that for using shopping list at a store
-- [ ] mark an item as purchased
-- [ ] mark an item as unavailable
-- [ ] option to group items by status (pending, purchased, unavilable)
-- [ ] progress indicators
-- [ ] When making a new planning session, offer to bring in unavailable items from previous session
 
 ---
 
