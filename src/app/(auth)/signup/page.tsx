@@ -18,6 +18,8 @@ import {
 import { notifications } from '@mantine/notifications'
 import Link from 'next/link'
 
+// TODO update per https://supabase.com/docs/guides/getting-started/tutorials/with-nextjs?queryGroups=language&language=ts#supabase-server-side-auth
+
 export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail] = useState('')

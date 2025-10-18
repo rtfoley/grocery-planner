@@ -1,21 +1,26 @@
 // src/components/Providers.tsx
 'use client'
 
-import { SessionContextProvider } from '@supabase/auth-helpers-react'
 import { MantineProvider } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
 import { Notifications } from '@mantine/notifications'
-import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
+import { createBrowserClient } from '@supabase/ssr'
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const [supabase] = useState(() =>
+    createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+    )
+  )
+
   return (
-    <SessionContextProvider supabaseClient={supabase}>
-      <MantineProvider defaultColorScheme="auto">
-        <Notifications />
-        <DatesProvider settings={{ firstDayOfWeek: 0 }}>
-          {children}
-        </DatesProvider>
-      </MantineProvider>
-    </SessionContextProvider>
+    <MantineProvider defaultColorScheme="auto">
+      <Notifications />
+      <DatesProvider settings={{ firstDayOfWeek: 0 }}>
+        {children}
+      </DatesProvider>
+    </MantineProvider>
   )
 }
