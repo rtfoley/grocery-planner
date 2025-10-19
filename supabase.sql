@@ -112,233 +112,6 @@ CREATE TABLE item_exclusions (
 );
 
 -- ============================================================================
--- ROW LEVEL SECURITY POLICIES
--- ============================================================================
-
--- Enable RLS on all tables
-ALTER TABLE shopping_groups ENABLE ROW LEVEL SECURITY;
-ALTER TABLE shopping_group_members ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pending_invitations ENABLE ROW LEVEL SECURITY;
-ALTER TABLE items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE recipe_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE planning_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meal_assignments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meal_side_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE staple_selections ENABLE ROW LEVEL SECURITY;
-ALTER TABLE adhoc_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE item_exclusions ENABLE ROW LEVEL SECURITY;
-
--- Shopping Groups: Users can only see groups they belong to
-CREATE POLICY "Users see their shopping groups"
-ON shopping_groups FOR SELECT
-USING (
-  id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid()
-  )
-);
-
-CREATE POLICY "Users can create shopping groups"
-ON shopping_groups FOR INSERT
-WITH CHECK (true);
-
-CREATE POLICY "Owners can update their groups"
-ON shopping_groups FOR UPDATE
-USING (
-  id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  )
-);
-
-CREATE POLICY "Owners can delete their groups"
-ON shopping_groups FOR DELETE
-USING (
-  id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  )
-);
-
--- Shopping Group Members: Manage membership
-CREATE POLICY "Users see members of their groups"
-ON shopping_group_members FOR SELECT
-USING (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid()
-  )
-);
-
-CREATE POLICY "Users can join groups"
-ON shopping_group_members FOR INSERT
-WITH CHECK (
-  -- Owners can add members
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  ) OR
-  -- Users can accept their own invitations
-  (
-    user_id = auth.uid() AND
-    shopping_group_id IN (
-      SELECT shopping_group_id FROM pending_invitations
-      WHERE invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-        AND expires_at > NOW()
-    )
-  )
-);
-
-CREATE POLICY "Owners and self can remove members"
-ON shopping_group_members FOR DELETE
-USING (
-  user_id = auth.uid() OR
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  )
-);
-
--- Pending Invitations: Manage invitations
-CREATE POLICY "Users see relevant invitations"
-ON pending_invitations FOR SELECT
-USING (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  ) OR
-  invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-);
-
-CREATE POLICY "Owners can invite members"
-ON pending_invitations FOR INSERT
-WITH CHECK (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  )
-);
-
-CREATE POLICY "Owners and invitees can delete invitations"
-ON pending_invitations FOR DELETE
-USING (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid() AND role = 'owner'
-  ) OR
-  invited_email = (SELECT email FROM auth.users WHERE id = auth.uid())
-);
-
--- Items: Group members have full access
-CREATE POLICY "Group members manage items"
-ON items FOR ALL
-USING (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid()
-  )
-);
-
--- Recipes: Group members have full access
-CREATE POLICY "Group members manage recipes"
-ON recipes FOR ALL
-USING (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid()
-  )
-);
-
--- Recipe Items: Access via recipe ownership
-CREATE POLICY "Group members manage recipe items"
-ON recipe_items FOR ALL
-USING (
-  recipe_id IN (
-    SELECT id FROM recipes
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
-    )
-  )
-);
-
--- Planning Sessions: Group members have full access
-CREATE POLICY "Group members manage planning sessions"
-ON planning_sessions FOR ALL
-USING (
-  shopping_group_id IN (
-    SELECT shopping_group_id FROM shopping_group_members
-    WHERE user_id = auth.uid()
-  )
-);
-
--- Meal Assignments: Access via planning session
-CREATE POLICY "Group members manage meal assignments"
-ON meal_assignments FOR ALL
-USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
-    )
-  )
-);
-
--- Meal Side Items: Access via planning session
-CREATE POLICY "Group members manage meal side items"
-ON meal_side_items FOR ALL
-USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
-    )
-  )
-);
-
--- Staple Selections: Access via planning session
-CREATE POLICY "Group members manage staple selections"
-ON staple_selections FOR ALL
-USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
-    )
-  )
-);
-
--- Ad-hoc Items: Access via planning session
-CREATE POLICY "Group members manage adhoc items"
-ON adhoc_items FOR ALL
-USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
-    )
-  )
-);
-
--- Item Exclusions: Access via planning session
-CREATE POLICY "Group members manage item exclusions"
-ON item_exclusions FOR ALL
-USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
-    )
-  )
-);
-
--- ============================================================================
 -- INDEXES FOR PERFORMANCE
 -- ============================================================================
 
@@ -406,22 +179,631 @@ CREATE TABLE shopping_item_status (
   PRIMARY KEY (planning_session_id, item_id)
 );
 
--- Enable RLS (add to the section with other ENABLE statements)
+-- Index (add to the indexes section)
+CREATE INDEX idx_shopping_item_status_session ON shopping_item_status(planning_session_id);
+CREATE INDEX idx_shopping_item_status_status ON shopping_item_status(planning_session_id, status);
+
+
+-- ============================================================================
+-- ROW LEVEL SECURITY POLICIES
+-- ============================================================================
+
+-- Enable RLS on all tables
+ALTER TABLE shopping_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shopping_group_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pending_invitations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE recipe_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE planning_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meal_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meal_side_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE staple_selections ENABLE ROW LEVEL SECURITY;
+ALTER TABLE adhoc_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE item_exclusions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shopping_item_status ENABLE ROW LEVEL SECURITY;
 
--- RLS Policy (add to the policies section)
-CREATE POLICY "Group members manage shopping status"
-ON shopping_item_status FOR ALL
+-- ============================================================================
+-- ITEMS POLICIES (4 separate policies)
+-- ============================================================================
+
+CREATE POLICY "Group members can view items"
+ON items FOR SELECT
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can create items"
+ON items FOR INSERT
+TO authenticated
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can update items"
+ON items FOR UPDATE
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+)
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can delete items"
+ON items FOR DELETE
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+-- ============================================================================
+-- RECIPES POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view recipes"
+ON recipes FOR SELECT
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can create recipes"
+ON recipes FOR INSERT
+TO authenticated
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can update recipes"
+ON recipes FOR UPDATE
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+)
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can delete recipes"
+ON recipes FOR DELETE
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+-- ============================================================================
+-- RECIPE ITEMS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view recipe items"
+ON recipe_items FOR SELECT
+TO authenticated
+USING (
+  recipe_id IN (
+    SELECT id FROM recipes
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create recipe items"
+ON recipe_items FOR INSERT
+TO authenticated
+WITH CHECK (
+  recipe_id IN (
+    SELECT id FROM recipes
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update recipe items"
+ON recipe_items FOR UPDATE
+TO authenticated
+USING (
+  recipe_id IN (
+    SELECT id FROM recipes
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  recipe_id IN (
+    SELECT id FROM recipes
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete recipe items"
+ON recipe_items FOR DELETE
+TO authenticated
+USING (
+  recipe_id IN (
+    SELECT id FROM recipes
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- PLANNING SESSIONS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view planning sessions"
+ON planning_sessions FOR SELECT
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can create planning sessions"
+ON planning_sessions FOR INSERT
+TO authenticated
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can update planning sessions"
+ON planning_sessions FOR UPDATE
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+)
+WITH CHECK (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+CREATE POLICY "Group members can delete planning sessions"
+ON planning_sessions FOR DELETE
+TO authenticated
+USING (
+  shopping_group_id IN (
+    SELECT shopping_group_id FROM shopping_group_members
+    WHERE user_id = (SELECT auth.uid())
+  )
+);
+
+-- ============================================================================
+-- MEAL ASSIGNMENTS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view meal assignments"
+ON meal_assignments FOR SELECT
+TO authenticated
 USING (
   planning_session_id IN (
     SELECT id FROM planning_sessions
     WHERE shopping_group_id IN (
       SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = auth.uid()
+      WHERE user_id = (SELECT auth.uid())
     )
   )
 );
 
--- Index (add to the indexes section)
-CREATE INDEX idx_shopping_item_status_session ON shopping_item_status(planning_session_id);
-CREATE INDEX idx_shopping_item_status_status ON shopping_item_status(planning_session_id, status);
+CREATE POLICY "Group members can create meal assignments"
+ON meal_assignments FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update meal assignments"
+ON meal_assignments FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete meal assignments"
+ON meal_assignments FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- MEAL SIDE ITEMS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view meal side items"
+ON meal_side_items FOR SELECT
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create meal side items"
+ON meal_side_items FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update meal side items"
+ON meal_side_items FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete meal side items"
+ON meal_side_items FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- STAPLE SELECTIONS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view staple selections"
+ON staple_selections FOR SELECT
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create staple selections"
+ON staple_selections FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update staple selections"
+ON staple_selections FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete staple selections"
+ON staple_selections FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- ADHOC ITEMS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view adhoc items"
+ON adhoc_items FOR SELECT
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create adhoc items"
+ON adhoc_items FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update adhoc items"
+ON adhoc_items FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete adhoc items"
+ON adhoc_items FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- ITEM EXCLUSIONS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view item exclusions"
+ON item_exclusions FOR SELECT
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create item exclusions"
+ON item_exclusions FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update item exclusions"
+ON item_exclusions FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete item exclusions"
+ON item_exclusions FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- SHOPPING ITEM STATUS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view shopping status"
+ON shopping_item_status FOR SELECT
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create shopping status"
+ON shopping_item_status FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update shopping status"
+ON shopping_item_status FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete shopping status"
+ON shopping_item_status FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
