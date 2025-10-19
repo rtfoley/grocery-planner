@@ -3,13 +3,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
-import { 
-  TextInput, 
-  PasswordInput, 
-  Button, 
-  Paper, 
-  Title, 
+import { createClient } from '@/lib/supabase/client'
+import {
+  TextInput,
+  PasswordInput,
+  Button,
+  Paper,
+  Title,
   Container,
   Text,
   Anchor,
@@ -17,8 +17,6 @@ import {
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import Link from 'next/link'
-
-// TODO update per https://supabase.com/docs/guides/getting-started/tutorials/with-nextjs?queryGroups=language&language=ts#supabase-server-side-auth
 
 export default function SignupPage() {
   const router = useRouter()
@@ -30,6 +28,7 @@ export default function SignupPage() {
     e.preventDefault()
     setLoading(true)
 
+    const supabase = createClient()
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -47,8 +46,8 @@ export default function SignupPage() {
         message: 'Account created! Redirecting...',
         color: 'green',
       })
-      // Redirect to home page
       router.push('/')
+      router.refresh()
     }
 
     setLoading(false)
