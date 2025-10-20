@@ -5,12 +5,11 @@ import { useEffect, useState } from 'react'
 import { Title, Group, Button, Grid, Text, Stack, Modal } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
-import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
+import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
 import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getActivePlanningSession, getAdhocItems, getItemExclusions, getMealAssignments, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
-import { Item, StapleStatus } from '@prisma/client'
 import { useDisclosure } from '@mantine/hooks'
 
 interface MealPlannerProps {
@@ -20,10 +19,10 @@ interface MealPlannerProps {
 
 export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   // State management
-  const [dateRange, setDateRange] = useState<[string | null, string | null]>([null, null]);
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [startDate, setStartDate] = useState<Date | null>();
   const [endDate, setEndDate] = useState<Date | null>();
-  const [planningSessionId, setPlanningSessionId] = useState<number | undefined>();
+  const [planningSessionId, setPlanningSessionId] = useState<string | undefined>();
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
@@ -68,22 +67,33 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       return;
     }
 
-    const start = new Date(dateRange[0] + 'T00:00:00');
-    const end = new Date(dateRange[1] + 'T00:00:00');
+    const start = dateRange[0];
+    const end = dateRange[1];
     console.log(`Creating session from ${start} - ${end}`);
 
     const dayCount = getDaysBetween(start, end);
 
     //// TODO add loading spinner
-    const planningSession = await createPlanningSession(start);
+    const planningSession = await createPlanningSession(
+      start.toISOString().split('T')[0],
+      end.toISOString().split('T')[0]
+    );
+    if (!planningSession) return;
+
     setPlanningSessionId(planningSession.id);
 
     const tempMealAssignments: MealAssignmentWithRecipe[] = [];
     for (let i = 0; i < dayCount; i++) {
       const date = new Date(start.getTime() + (i * 24 * 60 * 60 * 1000));
       console.log(`Adding meal slot for ${date}, ${start} + ${i} days`);
-      const assignment: MealAssignmentWithRecipe = await createMealAssignment(planningSession.id, null, date);
-      tempMealAssignments.push(assignment);
+      const assignment = await createMealAssignment(
+        planningSession.id,
+        null,
+        date.toISOString().split('T')[0]
+      );
+      if (assignment) {
+        tempMealAssignments.push(assignment);
+      }
     }
 
     setMealAssignments(tempMealAssignments);
@@ -91,8 +101,10 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     const tempStapleSelections: StapleSelectionWithItem[] = [];
     for (const item of allItems) {
       if (item.is_staple) {
-        const stapleSelection = await createStapleSelection(planningSession.id, item.id, StapleStatus.PENDING);
-        tempStapleSelections.push(stapleSelection);
+        const stapleSelection = await createStapleSelection(planningSession.id, item.id, StapleStatusEnum.PENDING);
+        if (stapleSelection) {
+          tempStapleSelections.push(stapleSelection);
+        }
       }
     }
 
@@ -105,15 +117,16 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     close();
   };
 
-  const excludeItem = async (itemId: number) => {
+  const excludeItem = async (itemId: string) => {
     if(planningSessionId === null)
     {
       return;
     }
 
     const itemExclusion = await addItemExclusion(planningSessionId!, itemId);
-
-    setExcludedItems(prev => [...prev, itemExclusion]);
+    if (itemExclusion) {
+      setExcludedItems(prev => [...prev, itemExclusion]);
+    }
   }
 
   const unexcludeItem = async (itemExclusion: ItemExclusionWithItem) => {
@@ -123,8 +136,9 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
   const addAdHocItem = async (itemName: string, amount: string) => {
     const newItem = await createAdhocItem(planningSessionId!, itemName, amount)
-
-    setAdHocItems(prev => [...prev, newItem])
+    if (newItem) {
+      setAdHocItems(prev => [...prev, newItem])
+    }
   }
 
   const updateAddhocItemAmount = async (updatedItem: AdhocItemWithItem) => {
@@ -158,17 +172,17 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     await updateStapleSelection(stapleSelection.planning_session_id!, stapleSelection.item_id, newStatus);
   }
 
-  const handleRecipeChange = async (assignment: MealAssignmentWithRecipe, recipeId: number | null) =>
+  const handleRecipeChange = async (assignment: MealAssignmentWithRecipe, recipeId: string | null) =>
   {
-    setMealAssignments(prev => 
-      prev.map(existingAssignment => 
-        existingAssignment.date.getTime() === assignment.date.getTime()
+    setMealAssignments(prev =>
+      prev.map(existingAssignment =>
+        existingAssignment.date === assignment.date
           ? { ...existingAssignment, recipe_id: recipeId }
           : existingAssignment
       )
     );
 
-    await updateMealAssignment(assignment.planning_session_id, recipeId, assignment.date);
+    await updateMealAssignment(assignment.id, recipeId);
   }
 
   const selectedRecipes = mealAssignments
@@ -193,10 +207,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
             label="Pick dates range"
             placeholder="Select start and end dates"
             value={dateRange}
-            onChange={(value) => {
-              console.log('DatePicker onChange:', value);
-              setDateRange(value);
-            }}
+            onChange={setDateRange}
             leftSection={<IconCalendar size={16} />}
             clearable={false}
             required

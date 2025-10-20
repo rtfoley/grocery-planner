@@ -631,13 +631,12 @@ app/
 - [x] Generate TypeScript types from Supabase schema
 
 ### Phase 2: Authentication
-- [ ] Create `/login` page with email/password form
-- [ ] Create `/signup` page with email/password form
-- [ ] Set up SessionContextProvider in root layout
-- [ ] Create auth middleware for route protection
-- [ ] Test signup flow (verify auto-group creation)
-- [ ] Test login flow
-- [ ] Test auth guards (accessing protected routes when logged out)
+- [x] Create `/login` page with email/password form
+- [x] Create `/signup` page with email/password form
+- [x] Create auth middleware for route protection
+- [x] Test signup flow (verify auto-group creation)
+- [x] Test login flow
+- [x] Test auth guards (accessing protected routes when logged out)
 
 ### Phase 3: Multi-Tenancy
 - [ ] Create `useUserGroup` hook

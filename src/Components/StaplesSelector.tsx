@@ -1,9 +1,8 @@
 // src/Components/StaplesSelector.tsx
 'use client'
 
-import { StapleSelectionWithItem } from '@/lib/types'
+import { StapleSelectionWithItem, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { Card, Title, Text, Stack, Group, Button } from '@mantine/core'
-import { StapleStatus } from '@prisma/client'
 
 interface StaplesSelectorProps {
   stapleSelections: StapleSelectionWithItem[]
@@ -27,17 +26,17 @@ export function StaplesSelector({
               <Group gap="xs">
                 <Button
                   size="xs"
-                  variant={staple.status === StapleStatus.INCLUDED ? 'filled' : 'subtle'}
-                  color={staple.status === StapleStatus.INCLUDED ? 'green' : 'gray'}
-                  onClick={() => onStapleSelection(staple, StapleStatus.INCLUDED)}
+                  variant={staple.status === StapleStatusEnum.INCLUDED ? 'filled' : 'subtle'}
+                  color={staple.status === StapleStatusEnum.INCLUDED ? 'green' : 'gray'}
+                  onClick={() => onStapleSelection(staple, StapleStatusEnum.INCLUDED)}
                 >
                   Include
                 </Button>
                 <Button
                   size="xs"
-                  variant={staple.status === StapleStatus.EXCLUDED ? 'filled' : 'subtle'}
-                  color={staple.status === StapleStatus.EXCLUDED ? 'red' : 'gray'}
-                  onClick={() => onStapleSelection(staple, StapleStatus.EXCLUDED)}
+                  variant={staple.status === StapleStatusEnum.EXCLUDED ? 'filled' : 'subtle'}
+                  color={staple.status === StapleStatusEnum.EXCLUDED ? 'red' : 'gray'}
+                  onClick={() => onStapleSelection(staple, StapleStatusEnum.EXCLUDED)}
                 >
                   Skip
                 </Button>

@@ -1,19 +1,18 @@
 import { getMealAssignments, updateMealAssignment } from "@/lib/actions";
-import { MealAssignmentWithRecipe } from "@/lib/types";
+import { MealAssignmentWithRecipe, Recipe } from "@/lib/types";
 import { Card, Title, Stack, Group, Select, Text } from "@mantine/core";
-import { Recipe } from "@prisma/client";
 
 interface MealListProps {
   mealAssignments: MealAssignmentWithRecipe[]
   recipes: Recipe[];
-  onRecipeChange: (mealAssignment: MealAssignmentWithRecipe, recipeId: number | null) => void
+  onRecipeChange: (mealAssignment: MealAssignmentWithRecipe, recipeId: string | null) => void
 }
 
 export function MealList({ mealAssignments, recipes, onRecipeChange }: MealListProps) {
   const recipeOptions = [
     { value: "", label: "Select recipe..." },
     ...recipes.map((recipe) => ({
-      value: recipe.id.toString(),
+      value: recipe.id,
       label:
         recipe.name.length > 40
           ? `${recipe.name.substring(0, 37)}...`
@@ -22,8 +21,7 @@ export function MealList({ mealAssignments, recipes, onRecipeChange }: MealListP
   ];
 
   const handleRecipeChange = (assignment: MealAssignmentWithRecipe, recipeId: string | null) => {
-    const recipeIdAdj = recipeId ? parseInt(recipeId) : null;
-    onRecipeChange(assignment, recipeIdAdj)
+    onRecipeChange(assignment, recipeId)
   };
 
   return (
@@ -33,21 +31,26 @@ export function MealList({ mealAssignments, recipes, onRecipeChange }: MealListP
       </Title>
       <Stack gap="sm">
         {mealAssignments
-          ?.sort((x) => x.date.getTime())
+          ?.sort((a, b) => {
+            if (!a.date || !b.date) return 0;
+            return new Date(a.date).getTime() - new Date(b.date).getTime();
+          })
           .map((assignment: MealAssignmentWithRecipe, index) => {
+            const dateStr = assignment.date ? new Date(assignment.date).toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "numeric",
+              day: "numeric",
+            }) : 'No date';
+
             return (
               <Group key={index} justify="space-between">
                 <Text w={80} size="sm">
-                  {assignment.date.toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "numeric",
-                    day: "numeric",
-                  })}
+                  {dateStr}
                 </Text>
                 <Select
                   placeholder="Select recipe..."
                   data={recipeOptions}
-                  value={assignment?.recipe_id?.toString() || ""}
+                  value={assignment?.recipe_id || ""}
                   onChange={(value) => handleRecipeChange(assignment, value || null)}
                   style={{ flex: 1 }}
                   clearable

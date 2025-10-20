@@ -5,14 +5,13 @@ import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import Link from 'next/link'
-import { AdhocItemWithItem, ItemExclusionWithItem, RecipeWithItems, StapleSelectionWithItem } from '@/lib/types'
-import { Item, StapleStatus } from '@prisma/client'
+import { AdhocItemWithItem, ItemExclusionWithItem, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
 import { ItemAutocomplete } from './ItemAutocomplete'
 
 interface ShoppingListProps {
   recipes: RecipeWithItems[]
   excludedItems?: ItemExclusionWithItem[]
-  onExcludeItem?: (itemId: number) => void
+  onExcludeItem?: (itemId: string) => void
   onUnexcludeItem?: (itemExclusion: ItemExclusionWithItem) => void
   adHocItems?: AdhocItemWithItem[]
   onAddAdHocItem?: (itemName: string, amount: string) => void
@@ -88,7 +87,7 @@ export function ShoppingList({
     // Add selected staples
     if (!!stapleSelections && stapleSelections.length > 0) {
       const selectedStaples: ShoppingItem[] = stapleSelections
-      .filter(staple => staple.status === StapleStatus.INCLUDED)
+      .filter(staple => staple.status === StapleStatusEnum.INCLUDED)
       .map(staple => ({
         itemName: staple.item.name,
         amounts: staple.item.staple_amount ? [staple.item.staple_amount] : [],

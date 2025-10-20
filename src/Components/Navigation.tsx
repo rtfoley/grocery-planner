@@ -1,19 +1,21 @@
 // src/Components/Navigation.tsx
 'use client'
 
-import { Container, Group, Button, Box, ActionIcon, useMantineColorScheme, Burger, Drawer, Stack, Text, Menu } from '@mantine/core'
-import { IconSun, IconMoon, IconLogout, IconUser } from '@tabler/icons-react'
+import { Container, Group, Button, Box, ActionIcon, useMantineColorScheme, Burger, Drawer, Stack, Text, Menu, Badge } from '@mantine/core'
+import { IconSun, IconMoon, IconLogout, IconUser, IconUsers } from '@tabler/icons-react'
 import { useDisclosure } from '@mantine/hooks'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { notifications } from '@mantine/notifications'
+import { useUserGroup } from '@/lib/hooks/useUserGroup'
 import Link from 'next/link'
 
 export function Navigation() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const [opened, { open, close }] = useDisclosure(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const { groupName } = useUserGroup()
   const router = useRouter()
 
   const navItems = [
@@ -77,8 +79,19 @@ export function Navigation() {
           {/* Mobile burger menu */}
           <Burger opened={opened} onClick={open} hiddenFrom="sm" size="sm" />
 
-          {/* Right side: User menu and theme toggle */}
+          {/* Right side: Group name, user menu and theme toggle */}
           <Group gap="xs">
+            {groupName && (
+              <Badge
+                leftSection={<IconUsers size={14} />}
+                variant="light"
+                size="lg"
+                visibleFrom="sm"
+              >
+                {groupName}
+              </Badge>
+            )}
+
             {userEmail && (
               <Menu shadow="md" width={200}>
                 <Menu.Target>
@@ -129,6 +142,16 @@ export function Navigation() {
 
           {userEmail && (
             <>
+              {groupName && (
+                <Badge
+                  leftSection={<IconUsers size={14} />}
+                  variant="light"
+                  size="lg"
+                  mt="md"
+                >
+                  {groupName}
+                </Badge>
+              )}
               <Text size="sm" c="dimmed" mt="md" px="xs">
                 Signed in as: {userEmail}
               </Text>
