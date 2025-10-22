@@ -17,11 +17,14 @@ export function useUserGroup() {
       const { data: { user } } = await supabase.auth.getUser()
 
       if (!user) {
+        // Reset all state when user is logged out
+        setGroupId(null)
+        setGroupName('')
+        setUserRole('member')
         setIsLoading(false)
         return
       }
 
-      console.log(`Have user ${user.email}`);
       const { data, error } = await supabase
         .from('shopping_group_members')
         .select(`
@@ -32,24 +35,17 @@ export function useUserGroup() {
           )
         `)
         .eq('user_id', user.id)
-        
-      if(data == null){
-        console.log("No groups found");
-      }
-      else if(data.length > 1) {
-        console.log("multiple groups found");
-        data!.forEach(element => {
-          console.log(`Group ${element.shopping_group_id} ${element.shopping_groups}`);
-        });
-      }
 
-      const group = data![0];
-      console.log(`Group ID ${group.shopping_group_id}`);
-
-      if (data && !error) {
+      if (data && data.length > 0 && !error) {
+        const group = data[0]
         setGroupId(group.shopping_group_id)
         setGroupName((group.shopping_groups as any)?.name || '')
         setUserRole(group.role as 'owner' | 'member')
+      } else {
+        // No group found - reset state
+        setGroupId(null)
+        setGroupName('')
+        setUserRole('member')
       }
 
       setIsLoading(false)

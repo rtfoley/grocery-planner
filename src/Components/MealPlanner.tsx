@@ -2,7 +2,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Title, Group, Button, Grid, Text, Stack, Modal } from '@mantine/core'
+import { Title, Group, Button, Grid, Text, Stack, Modal, Loader, Center } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
@@ -27,33 +27,40 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
   const [adHocItems, setAdHocItems] = useState<AdhocItemWithItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isCreatingSession, setIsCreatingSession] = useState(false)
 
   const [opened, { open, close }] = useDisclosure(false);
 
   useEffect(() => {
     async function fetchData() {
-      const planningSession = await getActivePlanningSession();
-      if(!planningSession)
-      {
-        return;
+      setIsLoading(true)
+      try {
+        const planningSession = await getActivePlanningSession();
+        if(!planningSession)
+        {
+          return;
+        }
+
+        setPlanningSessionId(planningSession.id);
+
+        const assignments = await getMealAssignments(planningSession?.id);
+        setMealAssignments(assignments);
+
+        // TODO check for staples that have been added that don't yet have selection records
+        const staples = await getStapleSelections(planningSession.id);
+        setStapleSelections(staples);
+
+        const itemExclusions = await getItemExclusions(planningSession.id);
+        setExcludedItems(itemExclusions);
+
+        const additionalItems = await getAdhocItems(planningSession.id);
+        setAdHocItems(additionalItems);
+      } finally {
+        setIsLoading(false)
       }
-
-      setPlanningSessionId(planningSession.id);
-
-      const assignments = await getMealAssignments(planningSession?.id);
-      setMealAssignments(assignments);
-
-      // TODO check for staples that have been added that don't yet have selection records
-      const staples = await getStapleSelections(planningSession.id);
-      setStapleSelections(staples);
-
-      const itemExclusions = await getItemExclusions(planningSession.id);
-      setExcludedItems(itemExclusions);
-
-      const additionalItems = await getAdhocItems(planningSession.id);
-      setAdHocItems(additionalItems);
     }
-    
+
     fetchData();
   }, [])
 
@@ -67,14 +74,15 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       return;
     }
 
-    const start = new Date(dateRange[0]);
-    const end = new Date(dateRange[1]);
-    console.log(`Creating session from ${start} - ${end}`);
+    setIsCreatingSession(true)
+    try {
+      const start = new Date(dateRange[0]);
+      const end = new Date(dateRange[1]);
+      console.log(`Creating session from ${start} - ${end}`);
 
-    const dayCount = getDaysBetween(start, end);
+      const dayCount = getDaysBetween(start, end);
 
-    //// TODO add loading spinner
-    const planningSession = await createPlanningSession(
+      const planningSession = await createPlanningSession(
       start.toISOString().split('T')[0],
       end.toISOString().split('T')[0]
     );
@@ -109,13 +117,16 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       }
     }
 
-    setStapleSelections(tempStapleSelections);
-    setExcludedItems([]);
+      setStapleSelections(tempStapleSelections);
+      setExcludedItems([]);
 
-    setStartDate(start);
-    setEndDate(end);
-    setDateRange([null, null]);
-    close();
+      setStartDate(start);
+      setEndDate(end);
+      setDateRange([null, null]);
+      close();
+    } finally {
+      setIsCreatingSession(false)
+    }
   };
 
   const excludeItem = async (itemId: string) => {
@@ -196,6 +207,14 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     open();
   }
 
+  if (isLoading) {
+    return (
+      <Center h={400}>
+        <Loader size="lg" />
+      </Center>
+    )
+  }
+
   return (
     <Stack gap="xl">
       <Modal opened={opened} onClose={close} title="New Session" centered
@@ -228,9 +247,10 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={startNewSession}
               disabled={!dateRange || dateRange.length !== 2 || !dateRange[0] || !dateRange[1]}
+              loading={isCreatingSession}
             >
               Create Session
             </Button>

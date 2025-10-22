@@ -639,14 +639,14 @@ app/
 - [x] Test auth guards (accessing protected routes when logged out)
 
 ### Phase 3: Multi-Tenancy
-- [ ] Create `useUserGroup` hook
-- [ ] Update all existing queries to filter by `shopping_group_id`
-- [ ] Update server actions to accept and use groupId
-- [ ] Convert all Prisma queries to Supabase
-- [ ] Remove Prisma dependencies
-- [ ] Update TypeScript types from `number` to `string` for IDs
+- [x] Create `useUserGroup` hook
+- [x] Update all existing queries to filter by `shopping_group_id`
+- [x] Update server actions to accept and use groupId
+- [x] Convert all Prisma queries to Supabase
+- [x] Remove Prisma dependencies
+- [x] Update TypeScript types from `number` to `string` for IDs
 - [ ] Test data isolation (create 2 users, verify separation)
-- [ ] Display group name in navigation/header
+- [x] Display group name in navigation/header
 
 ### Phase 4: New Core Features
 - [x] Add flexible date range selection in New Session modal
@@ -677,7 +677,7 @@ app/
 - [ ] Multi-user data isolation testing
 - [ ] Date range and multiple meals testing
 - [ ] Error handling refinement
-- [ ] Loading states for async operations
+- [x] Loading states for async operations
 - [ ] Mobile responsiveness check
 
 ### Phase 8: Invitations
