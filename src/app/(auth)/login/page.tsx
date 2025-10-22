@@ -34,8 +34,6 @@ export default function LoginPage() {
       password,
     })
 
-    console.log('Login response:', { data, error })
-
     if (error) {
       notifications.show({
         title: 'Error',
