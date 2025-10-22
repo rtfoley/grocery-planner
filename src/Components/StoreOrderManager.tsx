@@ -33,7 +33,7 @@ import { updateMultipleItemOrders } from '@/lib/actions'
 import { useRouter } from 'next/navigation'
 
 interface Item {
-  id: number
+  id: string
   name: string
   store_order_index: number | null
 }
@@ -70,7 +70,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
   const sensors = useSensors(useSensor(PointerSensor))
 
   // helper: find by id (coerce to string to avoid type mismatches)
-  const indexOfById = (arr: Item[], id: any) => arr.findIndex(i => String(i.id) === String(id))
+  const indexOfById = (arr: Item[], id: string) => arr.findIndex(i => String(i.id) === String(id))
 
   // reorder inside ordered list only (no cross-list drag)
   const handleDragEnd = (event: DragEndEvent) => {
@@ -88,7 +88,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
     }
   }
 
-  const addToOrder = (id: number, positionIndex?: number) => {
+  const addToOrder = (id: string, positionIndex?: number) => {
     const idx = indexOfById(unorderedItems, id)
     if (idx === -1) return
     const item = unorderedItems[idx]
@@ -101,7 +101,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
     })
   }
 
-  const removeFromOrder = (id: number) => {
+  const removeFromOrder = (id: string) => {
     const idx = indexOfById(orderedItems, id)
     if (idx === -1) return
     const item = orderedItems[idx]

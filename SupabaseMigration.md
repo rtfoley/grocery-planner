@@ -649,11 +649,14 @@ app/
 - [ ] Display group name in navigation/header
 
 ### Phase 4: New Core Features
-- [ ] Add flexible date range selection in New Session modal
-- [ ] Remove hardcoded 14-day session logic
+- [x] Add flexible date range selection in New Session modal
+- [x] Remove hardcoded 14-day session logic
 - [ ] Fix date timezone parsing (append T00:00:00)
+- [ ] Ability to see past sessions, or pick from current/ future ones that have already been started. 
+  - [ ] Page should default to showing the session that includes today's date, or the next chronological session
 - [ ] Update meal assignment logic for multiple meals/date
 - [ ] Test undated meals functionality
+- [ ] Show placeholder on planning page if no session active
 
 ### Phase 5: Meal side items
 - [ ] Add "Add Side Item" button per date in meal planner

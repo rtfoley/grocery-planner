@@ -67,8 +67,8 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       return;
     }
 
-    const start = dateRange[0];
-    const end = dateRange[1];
+    const start = new Date(dateRange[0]);
+    const end = new Date(dateRange[1]);
     console.log(`Creating session from ${start} - ${end}`);
 
     const dayCount = getDaysBetween(start, end);
@@ -84,6 +84,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
     const tempMealAssignments: MealAssignmentWithRecipe[] = [];
     for (let i = 0; i < dayCount; i++) {
+      console.log(start);
       const date = new Date(start.getTime() + (i * 24 * 60 * 60 * 1000));
       console.log(`Adding meal slot for ${date}, ${start} + ${i} days`);
       const assignment = await createMealAssignment(

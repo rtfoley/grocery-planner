@@ -10,7 +10,7 @@ interface PageProps {
 
 export default async function EditRecipePage({ params }: PageProps) {
   const { id } = await params
-  const recipe = await getRecipe(parseInt(id))
+  const recipe = await getRecipe(id)
   
   if (!recipe) {
     notFound()
