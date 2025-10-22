@@ -645,7 +645,7 @@ app/
 - [x] Convert all Prisma queries to Supabase
 - [x] Remove Prisma dependencies
 - [x] Update TypeScript types from `number` to `string` for IDs
-- [ ] Test data isolation (create 2 users, verify separation)
+- [x] Test data isolation (create 2 users, verify separation)
 - [x] Display group name in navigation/header
 
 ### Phase 4: New Core Features
