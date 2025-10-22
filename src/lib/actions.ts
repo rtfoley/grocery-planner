@@ -417,7 +417,24 @@ export async function createPlanningSession(startDate: string, endDate: string) 
   return data || null
 }
 
-export async function getActivePlanningSession() {
+// Get all planning sessions for the group
+export async function getPlanningSessions() {
+  const groupId = await getUserGroupId()
+  if (!groupId) return []
+
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('planning_sessions')
+    .select('*')
+    .eq('shopping_group_id', groupId)
+    .order('start_date', { ascending: false })
+
+  return data || []
+}
+
+// Get a specific planning session by ID
+export async function getPlanningSession(sessionId: string) {
   const groupId = await getUserGroupId()
   if (!groupId) return null
 
@@ -426,9 +443,8 @@ export async function getActivePlanningSession() {
   const { data } = await supabase
     .from('planning_sessions')
     .select('*')
+    .eq('id', sessionId)
     .eq('shopping_group_id', groupId)
-    .order('created_at', { ascending: false })
-    .limit(1)
     .single()
 
   return data || null

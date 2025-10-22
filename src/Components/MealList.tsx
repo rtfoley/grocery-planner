@@ -33,10 +33,12 @@ export function MealList({ mealAssignments, recipes, onRecipeChange }: MealListP
         {mealAssignments
           ?.sort((a, b) => {
             if (!a.date || !b.date) return 0;
-            return new Date(a.date).getTime() - new Date(b.date).getTime();
+            // Append T00:00:00 to avoid timezone issues
+            return new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime();
           })
           .map((assignment: MealAssignmentWithRecipe, index) => {
-            const dateStr = assignment.date ? new Date(assignment.date).toLocaleDateString("en-US", {
+            // Append T00:00:00 to avoid timezone issues
+            const dateStr = assignment.date ? new Date(assignment.date + 'T00:00:00').toLocaleDateString("en-US", {
               weekday: "short",
               month: "numeric",
               day: "numeric",

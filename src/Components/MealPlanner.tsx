@@ -2,13 +2,13 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Title, Group, Button, Grid, Text, Stack, Modal, Loader, Center } from '@mantine/core'
+import { Title, Group, Button, Grid, Text, Stack, Modal, Loader, Center, Paper, Select } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
-import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getActivePlanningSession, getAdhocItems, getItemExclusions, getMealAssignments, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
+import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getAdhocItems, getItemExclusions, getMealAssignments, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
 import { useDisclosure } from '@mantine/hooks'
 
@@ -23,6 +23,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   const [startDate, setStartDate] = useState<Date | null>();
   const [endDate, setEndDate] = useState<Date | null>();
   const [planningSessionId, setPlanningSessionId] = useState<string | undefined>();
+  const [allSessions, setAllSessions] = useState<Array<{id: string, start_date: string, end_date: string}>>([]);
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
@@ -36,26 +37,24 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     async function fetchData() {
       setIsLoading(true)
       try {
-        const planningSession = await getActivePlanningSession();
-        if(!planningSession)
-        {
+        // Load all sessions
+        const sessions = await getPlanningSessions();
+        setAllSessions(sessions);
+
+        if (sessions.length === 0) {
+          setIsLoading(false);
           return;
         }
 
-        setPlanningSessionId(planningSession.id);
+        // Find the active session (includes today or next upcoming)
+        const today = new Date().toISOString().split('T')[0];
+        const activeSession = sessions
+          .filter(s => s.end_date >= today)
+          .sort((a, b) => a.start_date.localeCompare(b.start_date))[0];
 
-        const assignments = await getMealAssignments(planningSession?.id);
-        setMealAssignments(assignments);
-
-        // TODO check for staples that have been added that don't yet have selection records
-        const staples = await getStapleSelections(planningSession.id);
-        setStapleSelections(staples);
-
-        const itemExclusions = await getItemExclusions(planningSession.id);
-        setExcludedItems(itemExclusions);
-
-        const additionalItems = await getAdhocItems(planningSession.id);
-        setAdHocItems(additionalItems);
+        if (activeSession) {
+          await loadSession(activeSession.id);
+        }
       } finally {
         setIsLoading(false)
       }
@@ -63,6 +62,33 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
     fetchData();
   }, [])
+
+  const loadSession = async (sessionId: string) => {
+    setIsLoading(true);
+    try {
+      const planningSession = await getPlanningSession(sessionId);
+      if (!planningSession) return;
+
+      setPlanningSessionId(planningSession.id);
+      setStartDate(new Date(planningSession.start_date + 'T00:00:00'));
+      setEndDate(new Date(planningSession.end_date + 'T00:00:00'));
+
+      const assignments = await getMealAssignments(planningSession.id);
+      setMealAssignments(assignments);
+
+      // TODO check for staples that have been added that don't yet have selection records
+      const staples = await getStapleSelections(planningSession.id);
+      setStapleSelections(staples);
+
+      const itemExclusions = await getItemExclusions(planningSession.id);
+      setExcludedItems(itemExclusions);
+
+      const additionalItems = await getAdhocItems(planningSession.id);
+      setAdHocItems(additionalItems);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
   const getDaysBetween = (start: Date, end: Date): number => {
     const oneDay = 24 * 60 * 60 * 1000;
@@ -119,6 +145,11 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       setStartDate(start);
       setEndDate(end);
       setDateRange([null, null]);
+
+      // Refresh sessions list
+      const sessions = await getPlanningSessions();
+      setAllSessions(sessions);
+
       close();
     } finally {
       setIsCreatingSession(false)
@@ -203,14 +234,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     open();
   }
 
-  if (isLoading) {
-    return (
-      <Center h={400}>
-        <Loader size="lg" />
-      </Center>
-    )
-  }
-
   return (
     <Stack gap="xl">
       <Modal opened={opened} onClose={close} title="New Session" centered
@@ -223,7 +246,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
             label="Pick dates range"
             placeholder="Select start and end dates"
             value={dateRange}
-            onChange={setDateRange}
+            onChange={(value) => setDateRange(value as [Date | null, Date | null])}
             leftSection={<IconCalendar size={16} />}
             clearable={false}
             required
@@ -235,10 +258,10 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
               return input < yesterday;
             }}
           />
-          
+
           <Group justify="flex-end" gap="sm">
-            <Button 
-              variant="subtle" 
+            <Button
+              variant="subtle"
               onClick={close}
             >
               Cancel
@@ -258,27 +281,68 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
           <Title order={1}>Meal Planning</Title>
           {startDate && endDate && (
             <Text c="dimmed">
-              {startDate.toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric' 
-              })} - {endDate.toLocaleDateString('en-US', { 
-                month: 'long', 
-                day: 'numeric' 
+              {startDate.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric'
+              })} - {endDate.toLocaleDateString('en-US', {
+                month: 'long',
+                day: 'numeric'
               })}
             </Text>
           )}
         </div>
-        <Group align="flex-end">
-          <Button variant="light" onClick={openModal}>
+        <Group align="flex-end" gap="sm">
+          {allSessions.length > 0 && (
+            <Select
+              placeholder="Select session"
+              value={planningSessionId || null}
+              onChange={(value) => value && loadSession(value)}
+              data={allSessions
+                .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
+                .map((session) => ({
+                  value: session.id,
+                  label: `${new Date(session.start_date + 'T00:00:00').toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })} - ${new Date(session.end_date + 'T00:00:00').toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}`,
+                }))
+              }
+              style={{ width: 200 }}
+              disabled={isLoading}
+            />
+          )}
+          <Button variant="light" onClick={openModal} disabled={isLoading}>
             New Session
           </Button>
         </Group>
       </Group>
 
-      <Grid>
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <MealList mealAssignments={mealAssignments} recipes={recipes} onRecipeChange={handleRecipeChange}/>
-        </Grid.Col>
+      {isLoading ? (
+        <Center h={400}>
+          <Loader size="lg" />
+        </Center>
+      ) : !planningSessionId ? (
+        <Center h={300}>
+          <Paper p="xl" withBorder>
+            <Stack align="center" gap="md">
+              <Text size="lg" fw={500}>No Active Planning Session</Text>
+              <Text c="dimmed" ta="center">
+                Create a new planning session to start planning your meals
+              </Text>
+              <Button onClick={openModal}>
+                Create Session
+              </Button>
+            </Stack>
+          </Paper>
+        </Center>
+      ) : (
+        <Grid>
+          <Grid.Col span={{ base: 12, md: 4 }}>
+            <MealList mealAssignments={mealAssignments} recipes={recipes} onRecipeChange={handleRecipeChange}/>
+          </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 4 }}>
           <StaplesSelector
@@ -302,6 +366,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
           />
         </Grid.Col>
       </Grid>
+      )}
     </Stack>
   )
 }
