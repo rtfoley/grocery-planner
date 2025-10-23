@@ -1,6 +1,6 @@
 import { MealAssignmentWithRecipe, Recipe } from "@/lib/types";
 import { getAdjustedDateFromString } from "@/lib/utilities";
-import { Card, Title, Stack, Group, Select, Text, ActionIcon, Button } from "@mantine/core";
+import { Card, Title, Stack, Group, Select, Text, ActionIcon } from "@mantine/core";
 import { IconPlus, IconTrash } from "@tabler/icons-react";
 
 interface MealListProps {
@@ -35,6 +35,11 @@ export function MealList({ mealAssignments, recipes, onRecipeChange, onAddMeal, 
     return acc;
   }, {} as Record<string, MealAssignmentWithRecipe[]>);
 
+  // Ensure 'undated' always exists (even if empty)
+  if (!assignmentsByDate['undated']) {
+    assignmentsByDate['undated'] = [];
+  }
+
   // Sort dates
   const sortedDates = Object.keys(assignmentsByDate).sort((a, b) => {
     if (a === 'undated') return 1;
@@ -45,21 +50,11 @@ export function MealList({ mealAssignments, recipes, onRecipeChange, onAddMeal, 
   return (
     <Card>
       <Stack gap="md">
-        <Group justify="space-between">
-          <Title order={3}>Meals</Title>
-          <Button
-            size="xs"
-            variant="light"
-            leftSection={<IconPlus size={14} />}
-            onClick={() => onAddMeal(null)}
-          >
-            Add Undated
-          </Button>
-        </Group>
+        <Title order={3}>Meals</Title>
         {sortedDates.map((date) => {
           const assignments = assignmentsByDate[date];
           const dateStr = date === 'undated'
-            ? 'Undated Meals'
+            ? 'Additional Meals'
             : getAdjustedDateFromString(date).toLocaleDateString("en-US", {
                 weekday: "short",
                 month: "numeric",
