@@ -11,6 +11,7 @@ import { StaplesSelector } from './StaplesSelector'
 import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getAdhocItems, getItemExclusions, getMealAssignments, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
 import { useDisclosure } from '@mantine/hooks'
+import { getAdjustedDateFromString } from '@/lib/utilities'
 
 interface MealPlannerProps {
   recipes: RecipeWithItems[]
@@ -20,8 +21,6 @@ interface MealPlannerProps {
 export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   // State management
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
-  const [startDate, setStartDate] = useState<Date | null>();
-  const [endDate, setEndDate] = useState<Date | null>();
   const [planningSessionId, setPlanningSessionId] = useState<string | undefined>();
   const [allSessions, setAllSessions] = useState<Array<{id: string, start_date: string, end_date: string}>>([]);
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
@@ -70,8 +69,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       if (!planningSession) return;
 
       setPlanningSessionId(planningSession.id);
-      setStartDate(new Date(planningSession.start_date + 'T00:00:00'));
-      setEndDate(new Date(planningSession.end_date + 'T00:00:00'));
 
       const assignments = await getMealAssignments(planningSession.id);
       setMealAssignments(assignments);
@@ -141,9 +138,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
       setStapleSelections(tempStapleSelections);
       setExcludedItems([]);
-
-      setStartDate(start);
-      setEndDate(end);
       setDateRange([null, null]);
 
       // Refresh sessions list
@@ -279,17 +273,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       <Group justify="space-between" align="flex-end">
         <div>
           <Title order={1}>Meal Planning</Title>
-          {startDate && endDate && (
-            <Text c="dimmed">
-              {startDate.toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric'
-              })} - {endDate.toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric'
-              })}
-            </Text>
-          )}
         </div>
         <Group align="flex-end" gap="sm">
           {allSessions.length > 0 && (
@@ -301,10 +284,10 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
                 .sort((a, b) => new Date(b.start_date).getTime() - new Date(a.start_date).getTime())
                 .map((session) => ({
                   value: session.id,
-                  label: `${new Date(session.start_date + 'T00:00:00').toLocaleDateString('en-US', {
+                  label: `${getAdjustedDateFromString(session.start_date).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
-                  })} - ${new Date(session.end_date + 'T00:00:00').toLocaleDateString('en-US', {
+                  })} - ${getAdjustedDateFromString(session.end_date).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                   })}`,

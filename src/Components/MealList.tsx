@@ -1,5 +1,6 @@
 import { getMealAssignments, updateMealAssignment } from "@/lib/actions";
 import { MealAssignmentWithRecipe, Recipe } from "@/lib/types";
+import { getAdjustedDateFromString } from "@/lib/utilities";
 import { Card, Title, Stack, Group, Select, Text } from "@mantine/core";
 
 interface MealListProps {
@@ -34,11 +35,11 @@ export function MealList({ mealAssignments, recipes, onRecipeChange }: MealListP
           ?.sort((a, b) => {
             if (!a.date || !b.date) return 0;
             // Append T00:00:00 to avoid timezone issues
-            return new Date(a.date + 'T00:00:00').getTime() - new Date(b.date + 'T00:00:00').getTime();
+            return getAdjustedDateFromString(a.date).getTime() - getAdjustedDateFromString(b.date).getTime();
           })
           .map((assignment: MealAssignmentWithRecipe, index) => {
             // Append T00:00:00 to avoid timezone issues
-            const dateStr = assignment.date ? new Date(assignment.date + 'T00:00:00').toLocaleDateString("en-US", {
+            const dateStr = assignment.date ? getAdjustedDateFromString(assignment.date).toLocaleDateString("en-US", {
               weekday: "short",
               month: "numeric",
               day: "numeric",
