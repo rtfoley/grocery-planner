@@ -8,7 +8,7 @@ import { IconCalendar } from '@tabler/icons-react'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
-import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, getAdhocItems, getItemExclusions, getMealAssignments, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
+import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMealAssignment, getAdhocItems, getItemExclusions, getMealAssignments, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
 import { useDisclosure } from '@mantine/hooks'
 import { getAdjustedDateFromString } from '@/lib/utilities'
@@ -209,13 +209,28 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   {
     setMealAssignments(prev =>
       prev.map(existingAssignment =>
-        existingAssignment.date === assignment.date
+        existingAssignment.id === assignment.id
           ? { ...existingAssignment, recipe_id: recipeId }
           : existingAssignment
       )
     );
 
     await updateMealAssignment(assignment.id, recipeId);
+  }
+
+  const handleAddMeal = async (date: string | null) => {
+    if (!planningSessionId) return;
+
+    const newAssignment = await createMealAssignment(planningSessionId, null, date);
+
+    if (newAssignment) {
+      setMealAssignments(prev => [...prev, newAssignment]);
+    }
+  }
+
+  const handleRemoveMeal = async (assignmentId: string) => {
+    setMealAssignments(prev => prev.filter(a => a.id !== assignmentId));
+    await deleteMealAssignment(assignmentId);
   }
 
   const selectedRecipes = mealAssignments
@@ -324,7 +339,13 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       ) : (
         <Grid>
           <Grid.Col span={{ base: 12, md: 4 }}>
-            <MealList mealAssignments={mealAssignments} recipes={recipes} onRecipeChange={handleRecipeChange}/>
+            <MealList
+              mealAssignments={mealAssignments}
+              recipes={recipes}
+              onRecipeChange={handleRecipeChange}
+              onAddMeal={handleAddMeal}
+              onRemoveMeal={handleRemoveMeal}
+            />
           </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 4 }}>

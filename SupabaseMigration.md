@@ -654,8 +654,8 @@ app/
 - [x] Fix date timezone parsing (append T00:00:00)
 - [x] Ability to see past sessions, or pick from current/ future ones that have already been started. 
   - [x] Page should default to showing the session that includes today's date, or the next chronological session
-- [ ] Update meal assignment logic for multiple meals/date
-- [ ] Test undated meals functionality
+- [x] Update meal assignment logic for multiple meals/date
+- [x] Test undated meals functionality
 - [x] Show placeholder on planning page if no session active
 
 ### Phase 5: Meal side items
