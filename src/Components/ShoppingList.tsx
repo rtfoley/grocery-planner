@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import Link from 'next/link'
-import { AdhocItemWithItem, ItemExclusionWithItem, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
+import { AdhocItemWithItem, ItemExclusionWithItem, MealSideItemWithItem, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
 import { ItemAutocomplete } from './ItemAutocomplete'
 
 interface ShoppingListProps {
@@ -17,6 +17,7 @@ interface ShoppingListProps {
   onAddAdHocItem?: (itemName: string, amount: string) => void
   onUpdateAdhocItem?: (updatedItem: AdhocItemWithItem) => void
   onRemoveAdHocItem?: (removedItem: AdhocItemWithItem) => void
+  mealSideItems?: MealSideItemWithItem[]
   stapleSelections?: StapleSelectionWithItem[]
   allItems?: Item[]
 }
@@ -26,18 +27,20 @@ interface ShoppingItem {
   amounts: string[]
   recipeCount: number
   isAdHoc?: boolean
+  isSide?: boolean
   isStaple?: boolean
   orderIndex?: number | null
 }
 
-export function ShoppingList({ 
-  recipes, 
-  excludedItems, 
+export function ShoppingList({
+  recipes,
+  excludedItems,
   onExcludeItem,
   onUnexcludeItem,
   adHocItems = [],
   onAddAdHocItem,
   onRemoveAdHocItem,
+  mealSideItems = [],
   stapleSelections,
   allItems = []
 }: ShoppingListProps) {
@@ -79,7 +82,7 @@ export function ShoppingList({
     return Array.from(itemMap.values())
   }, [recipes, orderLookup])
 
-  // Combine recipe items, ad-hoc items, and selected staples for display
+  // Combine recipe items, ad-hoc items, meal side items, and selected staples for display
   const allShoppingItems = useMemo(() => {
     // Start with recipe items
     const items = [...recipeShoppingItems]
@@ -107,6 +110,25 @@ export function ShoppingList({
       items.push(...deduplicatedStaples)
     }
 
+    // Add meal side items
+    const sideDisplayItems: ShoppingItem[] = mealSideItems.map(sideItem => ({
+      itemName: sideItem.item.name,
+      amounts: sideItem.amount ? [sideItem.amount] : [],
+      recipeCount: 0, // Indicates this is a side item
+      isSide: true,
+      orderIndex: orderLookup.get(sideItem.item.name)
+    }))
+
+    items.forEach((item) => {
+      if(sideDisplayItems.find(x => x.itemName === item.itemName))
+      {
+        item.isSide = true;
+      }
+    })
+
+    const deduplicatedSideItems = sideDisplayItems.filter(side => !items.find(x => x.itemName === side.itemName));
+    items.push(...deduplicatedSideItems)
+
     // Add ad-hoc items
     const adHocDisplayItems: ShoppingItem[] = adHocItems.map(adhocItem => ({
       itemName: adhocItem.item.name,
@@ -117,7 +139,7 @@ export function ShoppingList({
     }))
 
     return [...items, ...adHocDisplayItems]
-  }, [recipeShoppingItems, stapleSelections, adHocItems, orderLookup])
+  }, [recipeShoppingItems, stapleSelections, mealSideItems, adHocItems, orderLookup])
 
   // Sort items based on selected mode
   const sortedItems = useMemo(() => {
@@ -146,25 +168,32 @@ export function ShoppingList({
   //// TODO turn into helper, add unit tests
   const formatItem = (item: ShoppingItem) => {
     // Handle simple cases first
-    if (item.isStaple && item.recipeCount === 0) {
+    if (item.isStaple && item.recipeCount === 0 && !item.isSide) {
       return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName;
     }
-    
+
+    if (item.isSide && item.recipeCount === 0 && !item.isStaple) {
+      return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName;
+    }
+
     if (item.isAdHoc) {
       return item.amounts.length > 0 ? `${item.itemName}: ${item.amounts[0]}` : item.itemName;
     }
-    
+
     // Recipe items
     const amountText = item.amounts.join(', ');
     const otherRecipes = item.recipeCount - item.amounts.length;
-    const stapleFlag = item.isStaple ? ', staple' : '';
-    
+    const flags = [];
+    if (item.isStaple) flags.push('staple');
+    if (item.isSide) flags.push('side');
+    const flagText = flags.length > 0 ? ', ' + flags.join(', ') : '';
+
     if (amountText && otherRecipes > 0) {
-      return `${item.itemName}: ${amountText} (+ ${otherRecipes} other recipe${otherRecipes > 1 ? 's' : ''}${stapleFlag})`;
+      return `${item.itemName}: ${amountText} (+ ${otherRecipes} other recipe${otherRecipes > 1 ? 's' : ''}${flagText})`;
     } else if (amountText) {
-      return `${item.itemName}: ${amountText} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''}${stapleFlag})`;
+      return `${item.itemName}: ${amountText} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''}${flagText})`;
     } else {
-      return `${item.itemName} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''}${stapleFlag})`;
+      return `${item.itemName} (${item.recipeCount} recipe${item.recipeCount > 1 ? 's' : ''}${flagText})`;
     }
   };
 

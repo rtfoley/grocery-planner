@@ -13,6 +13,7 @@ export type StapleSelection = Tables['staple_selections']['Row']
 export type AdhocItem = Tables['adhoc_items']['Row']
 export type ItemExclusion = Tables['item_exclusions']['Row']
 export type RecipeItem = Tables['recipe_items']['Row']
+export type MealSideItem = Tables['meal_side_items']['Row']
 
 // Composite types with relations
 export type MealAssignmentWithRecipe = MealAssignment & {
@@ -35,6 +36,10 @@ export type ItemExclusionWithItem = ItemExclusion & {
 }
 
 export type AdhocItemWithItem = AdhocItem & {
+  item: Item
+}
+
+export type MealSideItemWithItem = MealSideItem & {
   item: Item
 }
 

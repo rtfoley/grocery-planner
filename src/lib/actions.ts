@@ -691,3 +691,62 @@ export async function deleteItemExclusion(planningSessionId: string, itemId: str
 
   return { success: !error }
 }
+
+// Meal side item actions
+export async function createMealSideItem(planningSessionId: string, date: string | null, itemId: string, amount: string | null) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meal_side_items')
+    .insert({
+      planning_session_id: planningSessionId,
+      date: date,
+      item_id: itemId,
+      amount: amount
+    })
+    .select(`
+      *,
+      item:items (*)
+    `)
+    .single()
+
+  return data || null
+}
+
+export async function getMealSideItems(planningSessionId: string) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meal_side_items')
+    .select(`
+      *,
+      item:items (*)
+    `)
+    .eq('planning_session_id', planningSessionId)
+
+  return data || []
+}
+
+export async function updateMealSideItem(sideItemId: string, amount: string | null) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meal_side_items')
+    .update({ amount })
+    .eq('id', sideItemId)
+    .select()
+    .single()
+
+  return data || null
+}
+
+export async function deleteMealSideItem(sideItemId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('meal_side_items')
+    .delete()
+    .eq('id', sideItemId)
+
+  return { success: !error }
+}

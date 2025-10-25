@@ -5,10 +5,10 @@ import { useEffect, useState } from 'react'
 import { Title, Group, Button, Grid, Text, Stack, Modal, Loader, Center, Paper, Select } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
-import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
+import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, MealSideItemWithItem, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
-import { addItemExclusion, createAdhocItem, createMealAssignment, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMealAssignment, getAdhocItems, getItemExclusions, getMealAssignments, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
+import { addItemExclusion, createAdhocItem, createMealAssignment, createMealSideItem, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMealAssignment, deleteMealSideItem, getAdhocItems, getItemExclusions, getMealAssignments, getMealSideItems, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
 import { MealList } from './MealList'
 import { useDisclosure } from '@mantine/hooks'
 import { getAdjustedDateFromString } from '@/lib/utilities'
@@ -24,6 +24,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   const [planningSessionId, setPlanningSessionId] = useState<string | undefined>();
   const [allSessions, setAllSessions] = useState<Array<{id: string, start_date: string, end_date: string}>>([]);
   const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
+  const [mealSideItems, setMealSideItems] = useState<MealSideItemWithItem[]>([]);
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
   const [adHocItems, setAdHocItems] = useState<AdhocItemWithItem[]>([])
@@ -72,6 +73,9 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
       const assignments = await getMealAssignments(planningSession.id);
       setMealAssignments(assignments);
+
+      const sideItems = await getMealSideItems(planningSession.id);
+      setMealSideItems(sideItems);
 
       // TODO check for staples that have been added that don't yet have selection records
       const staples = await getStapleSelections(planningSession.id);
@@ -233,6 +237,21 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     await deleteMealAssignment(assignmentId);
   }
 
+  const handleAddSideItem = async (date: string | null, itemId: string, amount: string) => {
+    if (!planningSessionId) return;
+
+    const newSideItem = await createMealSideItem(planningSessionId, date, itemId, amount || null);
+
+    if (newSideItem) {
+      setMealSideItems(prev => [...prev, newSideItem]);
+    }
+  }
+
+  const handleRemoveSideItem = async (sideItemId: string) => {
+    setMealSideItems(prev => prev.filter(s => s.id !== sideItemId));
+    await deleteMealSideItem(sideItemId);
+  }
+
   const selectedRecipes = mealAssignments
     .filter(assignment => assignment.recipe_id)
     .map(assignment => recipes.find(r => r.id === assignment.recipe_id)!)
@@ -341,10 +360,14 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
           <Grid.Col span={{ base: 12, md: 4 }}>
             <MealList
               mealAssignments={mealAssignments}
+              mealSideItems={mealSideItems}
               recipes={recipes}
+              allItems={allItems}
               onRecipeChange={handleRecipeChange}
               onAddMeal={handleAddMeal}
               onRemoveMeal={handleRemoveMeal}
+              onAddSideItem={handleAddSideItem}
+              onRemoveSideItem={handleRemoveSideItem}
             />
           </Grid.Col>
 
@@ -356,8 +379,8 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
         </Grid.Col>
 
         <Grid.Col span={{ base: 12, md: 4 }}>
-          <ShoppingList 
-            recipes={selectedRecipes} 
+          <ShoppingList
+            recipes={selectedRecipes}
             excludedItems={excludedItems}
             onExcludeItem={excludeItem}
             onUnexcludeItem={unexcludeItem}
@@ -365,6 +388,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
             onAddAdHocItem={addAdHocItem}
             onUpdateAdhocItem={updateAddhocItemAmount}
             onRemoveAdHocItem={removeAdHocItem}
+            mealSideItems={mealSideItems}
             stapleSelections={stapleSelections}
             allItems={allItems}
           />
