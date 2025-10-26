@@ -67,26 +67,31 @@ CREATE TABLE planning_sessions (
   CHECK (end_date >= start_date)
 );
 
--- Meal Assignments
-CREATE TABLE meal_assignments (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
-  recipe_id UUID REFERENCES recipes(id) ON DELETE SET NULL,
-  date DATE
-);
-
--- Meal Side Items (single-ingredient sides for specific dates)
-CREATE TABLE meal_side_items (
+-- Meals (meal-centric approach)
+CREATE TABLE meals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
   date DATE,
-  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
-  amount TEXT
+  name TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
--- Add index for common queries
-CREATE INDEX idx_meal_assignments_session ON meal_assignments(planning_session_id);
-CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, date);
+-- Meal Recipes (junction table linking recipes to meals)
+CREATE TABLE meal_recipes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  meal_id UUID NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+  recipe_id UUID NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+  UNIQUE(meal_id, recipe_id)
+);
+
+-- Meal Items (junction table linking individual items to meals)
+CREATE TABLE meal_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  meal_id UUID NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  amount TEXT,
+  UNIQUE(meal_id, item_id)
+);
 
 -- Staple Selections
 CREATE TABLE staple_selections (
@@ -122,10 +127,12 @@ CREATE INDEX idx_pending_invitations_group ON pending_invitations(shopping_group
 CREATE INDEX idx_items_shopping_group ON items(shopping_group_id);
 CREATE INDEX idx_recipes_shopping_group ON recipes(shopping_group_id);
 CREATE INDEX idx_planning_sessions_shopping_group ON planning_sessions(shopping_group_id);
-CREATE INDEX idx_meal_assignments_session ON meal_assignments(planning_session_id);
-CREATE INDEX idx_meal_assignments_date ON meal_assignments(planning_session_id, date);
-CREATE INDEX idx_meal_side_items_session ON meal_side_items(planning_session_id);
-CREATE INDEX idx_meal_side_items_date ON meal_side_items(planning_session_id, date);
+CREATE INDEX idx_meals_session ON meals(planning_session_id);
+CREATE INDEX idx_meals_date ON meals(date);
+CREATE INDEX idx_meal_recipes_meal ON meal_recipes(meal_id);
+CREATE INDEX idx_meal_recipes_recipe ON meal_recipes(recipe_id);
+CREATE INDEX idx_meal_items_meal ON meal_items(meal_id);
+CREATE INDEX idx_meal_items_item ON meal_items(item_id);
 CREATE INDEX idx_staple_selections_session ON staple_selections(planning_session_id);
 CREATE INDEX idx_adhoc_items_session ON adhoc_items(planning_session_id);
 CREATE INDEX idx_item_exclusions_session ON item_exclusions(planning_session_id);
@@ -197,8 +204,9 @@ ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE recipe_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE planning_sessions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meal_assignments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE meal_side_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meal_recipes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meal_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staple_selections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE adhoc_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_exclusions ENABLE ROW LEVEL SECURITY;
@@ -420,11 +428,11 @@ USING (
 );
 
 -- ============================================================================
--- MEAL ASSIGNMENTS POLICIES
+-- MEALS POLICIES
 -- ============================================================================
 
-CREATE POLICY "Group members can view meal assignments"
-ON meal_assignments FOR SELECT
+CREATE POLICY "Group members can view meals"
+ON meals FOR SELECT
 TO authenticated
 USING (
   planning_session_id IN (
@@ -436,8 +444,8 @@ USING (
   )
 );
 
-CREATE POLICY "Group members can create meal assignments"
-ON meal_assignments FOR INSERT
+CREATE POLICY "Group members can create meals"
+ON meals FOR INSERT
 TO authenticated
 WITH CHECK (
   planning_session_id IN (
@@ -449,8 +457,8 @@ WITH CHECK (
   )
 );
 
-CREATE POLICY "Group members can update meal assignments"
-ON meal_assignments FOR UPDATE
+CREATE POLICY "Group members can update meals"
+ON meals FOR UPDATE
 TO authenticated
 USING (
   planning_session_id IN (
@@ -471,8 +479,8 @@ WITH CHECK (
   )
 );
 
-CREATE POLICY "Group members can delete meal assignments"
-ON meal_assignments FOR DELETE
+CREATE POLICY "Group members can delete meals"
+ON meals FOR DELETE
 TO authenticated
 USING (
   planning_session_id IN (
@@ -485,66 +493,161 @@ USING (
 );
 
 -- ============================================================================
--- MEAL SIDE ITEMS POLICIES
+-- MEAL RECIPES POLICIES
 -- ============================================================================
 
-CREATE POLICY "Group members can view meal side items"
-ON meal_side_items FOR SELECT
+CREATE POLICY "Group members can view meal recipes"
+ON meal_recipes FOR SELECT
 TO authenticated
 USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = (SELECT auth.uid())
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
     )
   )
 );
 
-CREATE POLICY "Group members can create meal side items"
-ON meal_side_items FOR INSERT
+CREATE POLICY "Group members can create meal recipes"
+ON meal_recipes FOR INSERT
 TO authenticated
 WITH CHECK (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = (SELECT auth.uid())
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
     )
   )
 );
 
-CREATE POLICY "Group members can update meal side items"
-ON meal_side_items FOR UPDATE
+CREATE POLICY "Group members can update meal recipes"
+ON meal_recipes FOR UPDATE
 TO authenticated
 USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = (SELECT auth.uid())
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
     )
   )
 )
 WITH CHECK (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = (SELECT auth.uid())
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
     )
   )
 );
 
-CREATE POLICY "Group members can delete meal side items"
-ON meal_side_items FOR DELETE
+CREATE POLICY "Group members can delete meal recipes"
+ON meal_recipes FOR DELETE
 TO authenticated
 USING (
-  planning_session_id IN (
-    SELECT id FROM planning_sessions
-    WHERE shopping_group_id IN (
-      SELECT shopping_group_id FROM shopping_group_members
-      WHERE user_id = (SELECT auth.uid())
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
+    )
+  )
+);
+
+-- ============================================================================
+-- MEAL ITEMS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view meal items"
+ON meal_items FOR SELECT
+TO authenticated
+USING (
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
+    )
+  )
+);
+
+CREATE POLICY "Group members can create meal items"
+ON meal_items FOR INSERT
+TO authenticated
+WITH CHECK (
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
+    )
+  )
+);
+
+CREATE POLICY "Group members can update meal items"
+ON meal_items FOR UPDATE
+TO authenticated
+USING (
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
+    )
+  )
+)
+WITH CHECK (
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete meal items"
+ON meal_items FOR DELETE
+TO authenticated
+USING (
+  meal_id IN (
+    SELECT id FROM meals
+    WHERE planning_session_id IN (
+      SELECT id FROM planning_sessions
+      WHERE shopping_group_id IN (
+        SELECT shopping_group_id FROM shopping_group_members
+        WHERE user_id = (SELECT auth.uid())
+      )
     )
   )
 );

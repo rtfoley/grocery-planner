@@ -112,35 +112,68 @@ export type Database = {
           },
         ]
       }
-      meal_assignments: {
+      meal_items: {
         Row: {
-          date: string | null
+          amount: string | null
           id: string
-          planning_session_id: string
-          recipe_id: string | null
+          item_id: string
+          meal_id: string
         }
         Insert: {
-          date?: string | null
+          amount?: string | null
           id?: string
-          planning_session_id: string
-          recipe_id?: string | null
+          item_id: string
+          meal_id: string
         }
         Update: {
-          date?: string | null
+          amount?: string | null
           id?: string
-          planning_session_id?: string
-          recipe_id?: string | null
+          item_id?: string
+          meal_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "meal_assignments_planning_session_id_fkey"
-            columns: ["planning_session_id"]
+            foreignKeyName: "meal_items_item_id_fkey"
+            columns: ["item_id"]
             isOneToOne: false
-            referencedRelation: "planning_sessions"
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "meal_assignments_recipe_id_fkey"
+            foreignKeyName: "meal_items_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_recipes: {
+        Row: {
+          id: string
+          meal_id: string
+          recipe_id: string
+        }
+        Insert: {
+          id?: string
+          meal_id: string
+          recipe_id: string
+        }
+        Update: {
+          id?: string
+          meal_id?: string
+          recipe_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_recipes_meal_id_fkey"
+            columns: ["meal_id"]
+            isOneToOne: false
+            referencedRelation: "meals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_recipes_recipe_id_fkey"
             columns: ["recipe_id"]
             isOneToOne: false
             referencedRelation: "recipes"
@@ -148,38 +181,31 @@ export type Database = {
           },
         ]
       }
-      meal_side_items: {
+      meals: {
         Row: {
-          amount: string | null
+          created_at: string
           date: string | null
           id: string
-          item_id: string
+          name: string | null
           planning_session_id: string
         }
         Insert: {
-          amount?: string | null
+          created_at?: string
           date?: string | null
           id?: string
-          item_id: string
+          name?: string | null
           planning_session_id: string
         }
         Update: {
-          amount?: string | null
+          created_at?: string
           date?: string | null
           id?: string
-          item_id?: string
+          name?: string | null
           planning_session_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "meal_side_items_item_id_fkey"
-            columns: ["item_id"]
-            isOneToOne: false
-            referencedRelation: "items"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "meal_side_items_planning_session_id_fkey"
+            foreignKeyName: "meals_planning_session_id_fkey"
             columns: ["planning_session_id"]
             isOneToOne: false
             referencedRelation: "planning_sessions"
@@ -434,7 +460,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_is_group_member: { Args: { group_id: string }; Returns: boolean }
     }
     Enums: {
       staple_status: "PENDING" | "INCLUDED" | "EXCLUDED"

@@ -210,22 +210,22 @@ This simplified approach eliminates:
 
 ### Part 1: Database Schema (Do First)
 
-- [ ] **1.1**: Create migration SQL script - `meal-migration.sql`
-  - [ ] Drop `meal_side_items` table
-  - [ ] Drop `meal_assignments` table
-  - [ ] Create `meals` table
-  - [ ] Create `meal_recipes` table (no role field)
-  - [ ] Create `meal_items` table (with meal_id FK, not date)
-  - [ ] Add foreign key constraints with CASCADE deletes
-  - [ ] Add indexes (meal_id, planning_session_id, date)
-  - [ ] Add UNIQUE constraints on junction tables
-  - [ ] Update `supabase.sql` to reflect new full database schema
+- [x] **1.1**: Create migration SQL script - `meal-migration.sql`
+  - [x] Drop `meal_side_items` table
+  - [x] Drop `meal_assignments` table
+  - [x] Create `meals` table
+  - [x] Create `meal_recipes` table (no role field)
+  - [x] Create `meal_items` table (with meal_id FK, not date)
+  - [x] Add foreign key constraints with CASCADE deletes
+  - [x] Add indexes (meal_id, planning_session_id, date)
+  - [x] Add UNIQUE constraints on junction tables
+  - [x] Update `supabase.sql` to reflect new full database schema
 
 - [ ] **1.2**: Apply migration and regenerate types - done manually by human
-  - [ ] Apply migration to Supabase via SQL editor or migration tool
-  - [ ] Run `npx supabase gen types typescript` to regenerate database.types.ts
-  - [ ] Verify types match new schema
-  - [ ] Commit updated database.types.ts
+  - [x] Apply migration to Supabase via SQL editor or migration tool
+  - [x] Run `npx supabase gen types typescript` to regenerate database.types.ts
+  - [x] Verify types match new schema
+  - [x] Commit updated database.types.ts
 
 ### Part 2: TypeScript Types & Actions
 
