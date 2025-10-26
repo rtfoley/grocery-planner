@@ -110,7 +110,7 @@ export function MealList({
   return (
     <>
       <Card>
-        <Stack gap="md">
+        <Stack gap="sm">
           <Title order={3}>Meals</Title>
           {sortedDates.map((date) => {
             const dateMeals = mealsByDate[date];
@@ -127,11 +127,11 @@ export function MealList({
               <Card
                 key={date}
                 withBorder
-                padding="sm"
+                padding="xs"
                 style={{ backgroundColor: "var(--mantine-color-default-hover)" }}
               >
                 <Stack gap="xs">
-                  <Group justify="space-between">
+                  <Group justify="space-between" gap="xs">
                     <Text
                       size="sm"
                       fw={600}
@@ -140,12 +140,12 @@ export function MealList({
                       {dateStr}
                     </Text>
                     <Button
-                      size="xs"
+                      size="compact-xs"
                       variant="subtle"
-                      leftSection={<IconPlus size={14} />}
+                      leftSection={<IconPlus size={12} />}
                       onClick={() => handleAddMealClick(date)}
                     >
-                      Add Meal
+                      Add
                     </Button>
                   </Group>
 
@@ -160,8 +160,8 @@ export function MealList({
                       />
                     ))
                   ) : (
-                    <Text size="xs" c="dimmed" fs="italic">
-                      No meals planned for this date
+                    <Text size="sm" c="dimmed" fs="italic">
+                      No meals
                     </Text>
                   )}
                 </Stack>

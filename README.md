@@ -92,15 +92,16 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Add PlanningSession, MealAssignment, AdHocItem tables
 - [x] Convert all in-memory state to persistent storage
 - [x] handle duplicate items across recipes and staples within a shopping list
-- [ ] Session history and management
+- [x] Session history and management
 
 ### Slice 6: Usability Improvements
 - [x] Deleting recipes
 - [x] Add one-click export to iOS Notes app for offline mobile shopping
 - [x] allow user to specify start and end date of a session
-- [ ] allow user to add extra meals that don't have a date specified
-- [ ] allow user to add sides that are single ingredients
-- [ ] allow user to add sides that are recipes
+- [x] allow user to add extra meals that don't have a date specified
+- [x] allow user to add sides that are single ingredients
+- [x] allow user to add sides that are recipes
+- [ ] default shopping group names shoudl include owner email address (without domain)
 
 ### Splice 7: Deployment
 - [ ] Pi deployment setup

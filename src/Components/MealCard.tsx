@@ -14,10 +14,10 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
   const isEmpty = !hasRecipes && !hasItems;
 
   return (
-    <Card withBorder padding="sm" radius="md">
-      <Stack gap="xs">
+    <Card withBorder padding="xs" radius="sm">
+      <Stack gap={4}>
         {/* Header with meal name and actions */}
-        <Group justify="space-between" align="flex-start">
+        <Group justify="space-between" align="flex-start" gap="xs">
           <div style={{ flex: 1 }}>
             {meal.name ? (
               <Text size="sm" fw={600}>
@@ -29,65 +29,55 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
               </Text>
             )}
           </div>
-          <Group gap="xs">
+          <Group gap={4}>
             <ActionIcon
               variant="subtle"
-              size="sm"
+              size="xs"
               onClick={() => onEdit(meal)}
               aria-label="Edit meal"
             >
-              <IconEdit size={16} />
+              <IconEdit size={14} />
             </ActionIcon>
             <ActionIcon
               variant="subtle"
               color="red"
-              size="sm"
+              size="xs"
               onClick={() => onDelete(meal.id)}
               aria-label="Delete meal"
             >
-              <IconTrash size={16} />
+              <IconTrash size={14} />
             </ActionIcon>
           </Group>
         </Group>
 
         {/* Empty state */}
         {isEmpty && (
-          <Text size="xs" c="dimmed" fs="italic">
-            No recipes or items added yet
+          <Text size="sm" c="dimmed" fs="italic">
+            Empty
           </Text>
         )}
 
         {/* Recipes */}
         {hasRecipes && (
-          <div>
-            <Text size="xs" c="dimmed" mb={4}>
-              Recipes:
-            </Text>
-            <Group gap={6}>
-              {meal.meal_recipes.map((mr) => (
-                <Badge key={mr.id} size="sm" variant="light">
-                  {mr.recipe.name}
-                </Badge>
-              ))}
-            </Group>
-          </div>
+          <Group gap={4} mt={2}>
+            {meal.meal_recipes.map((mr) => (
+              <Badge key={mr.id} size="sm" variant="light">
+                {mr.recipe.name}
+              </Badge>
+            ))}
+          </Group>
         )}
 
         {/* Items */}
         {hasItems && (
-          <div>
-            <Text size="xs" c="dimmed" mb={4}>
-              Items:
-            </Text>
-            <Stack gap={2}>
-              {meal.meal_items.map((mi) => (
-                <Text key={mi.id} size="xs">
-                  {mi.item.name}
-                  {mi.amount ? `: ${mi.amount}` : ""}
-                </Text>
-              ))}
-            </Stack>
-          </div>
+          <Stack gap={2} mt={2}>
+            {meal.meal_items.map((mi) => (
+              <Text key={mi.id} size="sm" c="dimmed">
+                + {mi.item.name}
+                {mi.amount ? ` (${mi.amount})` : ""}
+              </Text>
+            ))}
+          </Stack>
         )}
       </Stack>
     </Card>
