@@ -1,218 +1,185 @@
-import { MealAssignmentWithRecipe, MealSideItemWithItem, Recipe, Item } from "@/lib/types";
+import { MealWithDetails, Recipe, Item } from "@/lib/types";
 import { getAdjustedDateFromString } from "@/lib/utilities";
-import { Card, Title, Stack, Group, Select, Text, ActionIcon, TextInput, Button } from "@mantine/core";
-import { IconPlus, IconTrash, IconCheck } from "@tabler/icons-react";
-import { ItemAutocomplete } from "./ItemAutocomplete";
+import { Card, Title, Stack, Group, Text, Button } from "@mantine/core";
+import { IconPlus } from "@tabler/icons-react";
 import { useState } from "react";
+import { MealCard } from "./MealCard";
+import { MealDialog, MealDialogData } from "./MealDialog";
 
 interface MealListProps {
-  mealAssignments: MealAssignmentWithRecipe[]
-  mealSideItems: MealSideItemWithItem[]
+  meals: MealWithDetails[];
+  sessionStartDate: string | null;
+  sessionEndDate: string | null;
   recipes: Recipe[];
   allItems: Item[];
-  onRecipeChange: (mealAssignment: MealAssignmentWithRecipe, recipeId: string | null) => void
-  onAddMeal: (date: string | null) => void
-  onRemoveMeal: (assignmentId: string) => void
-  onAddSideItem: (date: string | null, itemId: string, amount: string) => void
-  onRemoveSideItem: (sideItemId: string) => void
+  onAddMeal: (date: string | null, mealData: MealDialogData) => void;
+  onUpdateMeal: (mealId: string, mealData: MealDialogData) => void;
+  onDeleteMeal: (mealId: string) => void;
 }
 
-export function MealList({ mealAssignments, mealSideItems, recipes, allItems, onRecipeChange, onAddMeal, onRemoveMeal, onAddSideItem, onRemoveSideItem }: MealListProps) {
-  const [addingSideForDate, setAddingSideForDate] = useState<string | null>(null);
-  const [sideItemName, setSideItemName] = useState('');
-  const [sideItemAmount, setSideItemAmount] = useState('');
-  const recipeOptions = [
-    { value: "", label: "Select recipe..." },
-    ...recipes.map((recipe) => ({
-      value: recipe.id,
-      label:
-        recipe.name.length > 40
-          ? `${recipe.name.substring(0, 37)}...`
-          : recipe.name,
-    })),
-  ];
+export function MealList({
+  meals,
+  sessionStartDate,
+  sessionEndDate,
+  recipes,
+  allItems,
+  onAddMeal,
+  onUpdateMeal,
+  onDeleteMeal,
+}: MealListProps) {
+  const [dialogOpened, setDialogOpened] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<MealWithDetails | null>(null);
+  const [addingForDate, setAddingForDate] = useState<string | null>(null);
 
-  const handleRecipeChange = (assignment: MealAssignmentWithRecipe, recipeId: string | null) => {
-    onRecipeChange(assignment, recipeId)
+  // Generate all dates in session range
+  const generateSessionDates = (): string[] => {
+    if (!sessionStartDate || !sessionEndDate) return [];
+
+    const dates: string[] = [];
+    const start = getAdjustedDateFromString(sessionStartDate);
+    const end = getAdjustedDateFromString(sessionEndDate);
+
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+
+    return dates;
   };
 
-  const handleAddSideClick = (date: string) => {
-    setAddingSideForDate(date);
-    setSideItemName('');
-    setSideItemAmount('');
-  };
-
-  const handleSaveSideItem = (date: string) => {
-    if (!sideItemName.trim()) return;
-
-    const item = allItems.find(i => i.name === sideItemName.toLowerCase().trim());
-    if (!item) return;
-
-    const actualDate = date === 'undated' ? null : date;
-    onAddSideItem(actualDate, item.id, sideItemAmount.trim());
-    setAddingSideForDate(null);
-  };
-
-  const handleCancelSideItem = () => {
-    setAddingSideForDate(null);
-    setSideItemName('');
-    setSideItemAmount('');
-  };
-
-  // Group assignments by date
-  const assignmentsByDate = mealAssignments.reduce((acc, assignment) => {
-    const date = assignment.date || 'undated';
+  // Group meals by date
+  const mealsByDate = meals.reduce((acc, meal) => {
+    const date = meal.date || "undated";
     if (!acc[date]) acc[date] = [];
-    acc[date].push(assignment);
+    acc[date].push(meal);
     return acc;
-  }, {} as Record<string, MealAssignmentWithRecipe[]>);
+  }, {} as Record<string, MealWithDetails[]>);
 
-  // Ensure 'undated' always exists (even if empty)
-  if (!assignmentsByDate['undated']) {
-    assignmentsByDate['undated'] = [];
-  }
-
-  // Group side items by date
-  const sideItemsByDate = mealSideItems.reduce((acc, sideItem) => {
-    const date = sideItem.date || 'undated';
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(sideItem);
-    return acc;
-  }, {} as Record<string, MealSideItemWithItem[]>);
-
-  // Sort dates
-  const sortedDates = Object.keys(assignmentsByDate).sort((a, b) => {
-    if (a === 'undated') return 1;
-    if (b === 'undated') return -1;
-    return getAdjustedDateFromString(a).getTime() - getAdjustedDateFromString(b).getTime();
+  // Add all session dates (even if no meals)
+  const sessionDates = generateSessionDates();
+  sessionDates.forEach(date => {
+    if (!mealsByDate[date]) {
+      mealsByDate[date] = [];
+    }
   });
 
+  // Ensure 'undated' always exists (even if empty)
+  if (!mealsByDate["undated"]) {
+    mealsByDate["undated"] = [];
+  }
+
+  // Sort dates
+  const sortedDates = Object.keys(mealsByDate).sort((a, b) => {
+    if (a === "undated") return 1;
+    if (b === "undated") return -1;
+    return (
+      getAdjustedDateFromString(a).getTime() -
+      getAdjustedDateFromString(b).getTime()
+    );
+  });
+
+  const handleAddMealClick = (date: string) => {
+    setAddingForDate(date === "undated" ? null : date);
+    setEditingMeal(null);
+    setDialogOpened(true);
+  };
+
+  const handleEditMeal = (meal: MealWithDetails) => {
+    setEditingMeal(meal);
+    setAddingForDate(null);
+    setDialogOpened(true);
+  };
+
+  const handleSaveMeal = (mealData: MealDialogData) => {
+    if (editingMeal) {
+      // Update existing meal
+      onUpdateMeal(editingMeal.id, mealData);
+    } else {
+      // Create new meal
+      onAddMeal(addingForDate, mealData);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setDialogOpened(false);
+    setEditingMeal(null);
+    setAddingForDate(null);
+  };
+
   return (
-    <Card>
-      <Stack gap="md">
-        <Title order={3}>Meals</Title>
-        {sortedDates.map((date) => {
-          const assignments = assignmentsByDate[date];
-          const dateStr = date === 'undated'
-            ? 'Additional Meals'
-            : getAdjustedDateFromString(date).toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "numeric",
-                day: "numeric",
-              });
+    <>
+      <Card>
+        <Stack gap="md">
+          <Title order={3}>Meals</Title>
+          {sortedDates.map((date) => {
+            const dateMeals = mealsByDate[date];
+            const dateStr =
+              date === "undated"
+                ? "Additional Meals"
+                : getAdjustedDateFromString(date).toLocaleDateString("en-US", {
+                    weekday: "short",
+                    month: "numeric",
+                    day: "numeric",
+                  });
 
-          const dateSideItems = sideItemsByDate[date] || [];
-
-          return (
-            <Card key={date} withBorder padding="sm" style={{ backgroundColor: 'var(--mantine-color-default-hover)' }}>
-              <Stack gap="xs">
-                <Group justify="space-between">
-                  <Text size="sm" fw={600} c={date === 'undated' ? 'dimmed' : undefined}>
-                    {dateStr}
-                  </Text>
-                  <ActionIcon
-                    variant="subtle"
-                    size="sm"
-                    onClick={() => onAddMeal(date === 'undated' ? null : date)}
-                    aria-label="Add meal"
-                  >
-                    <IconPlus size={16} />
-                  </ActionIcon>
-                </Group>
-
-                {/* Meal assignments */}
-                {assignments.map((assignment) => (
-                  <Group key={assignment.id} gap="xs">
-                    <Select
-                      placeholder="Select recipe..."
-                      data={recipeOptions}
-                      value={assignment?.recipe_id || ""}
-                      onChange={(value) => handleRecipeChange(assignment, value || null)}
-                      style={{ flex: 1 }}
-                      clearable
+            return (
+              <Card
+                key={date}
+                withBorder
+                padding="sm"
+                style={{ backgroundColor: "var(--mantine-color-default-hover)" }}
+              >
+                <Stack gap="xs">
+                  <Group justify="space-between">
+                    <Text
                       size="sm"
-                    />
-                    {assignments.length > 1 && (
-                      <ActionIcon
-                        variant="subtle"
-                        color="red"
-                        size="sm"
-                        onClick={() => onRemoveMeal(assignment.id)}
-                        aria-label="Remove meal"
-                      >
-                        <IconTrash size={16} />
-                      </ActionIcon>
-                    )}
-                  </Group>
-                ))}
-
-                {/* Side items */}
-                {dateSideItems.map((sideItem) => (
-                  <Group key={sideItem.id} gap="xs">
-                    <Text size="sm" c="dimmed" style={{ flex: 1 }}>
-                      Side: {sideItem.item.name}{sideItem.amount ? `: ${sideItem.amount}` : ''}
+                      fw={600}
+                      c={date === "undated" ? "dimmed" : undefined}
+                    >
+                      {dateStr}
                     </Text>
-                    <ActionIcon
+                    <Button
+                      size="xs"
                       variant="subtle"
-                      color="red"
-                      size="sm"
-                      onClick={() => onRemoveSideItem(sideItem.id)}
-                      aria-label="Remove side item"
+                      leftSection={<IconPlus size={14} />}
+                      onClick={() => handleAddMealClick(date)}
                     >
-                      <IconTrash size={16} />
-                    </ActionIcon>
+                      Add Meal
+                    </Button>
                   </Group>
-                ))}
 
-                {/* Add side item inline UI */}
-                {addingSideForDate === date ? (
-                  <Group gap="xs" align="flex-end">
-                    <ItemAutocomplete
-                      placeholder="Side item..."
-                      value={sideItemName}
-                      onChange={setSideItemName}
-                      size="xs"
-                      style={{ flex: 2 }}
-                    />
-                    <TextInput
-                      placeholder="Amount"
-                      value={sideItemAmount}
-                      onChange={(e) => setSideItemAmount(e.target.value)}
-                      size="xs"
-                      style={{ flex: 1 }}
-                    />
-                    <ActionIcon
-                      variant="filled"
-                      color="green"
-                      size="sm"
-                      onClick={() => handleSaveSideItem(date)}
-                      disabled={!sideItemName.trim()}
-                    >
-                      <IconCheck size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="subtle"
-                      size="sm"
-                      onClick={handleCancelSideItem}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                ) : (
-                  <Button
-                    size="xs"
-                    variant="subtle"
-                    leftSection={<IconPlus size={14} />}
-                    onClick={() => handleAddSideClick(date)}
-                  >
-                    Add Side
-                  </Button>
-                )}
-              </Stack>
-            </Card>
-          );
-        })}
-      </Stack>
-    </Card>
+                  {/* Meal cards */}
+                  {dateMeals.length > 0 ? (
+                    dateMeals.map((meal) => (
+                      <MealCard
+                        key={meal.id}
+                        meal={meal}
+                        onEdit={handleEditMeal}
+                        onDelete={onDeleteMeal}
+                      />
+                    ))
+                  ) : (
+                    <Text size="xs" c="dimmed" fs="italic">
+                      No meals planned for this date
+                    </Text>
+                  )}
+                </Stack>
+              </Card>
+            );
+          })}
+        </Stack>
+      </Card>
+
+      {/* Meal Dialog */}
+      <MealDialog
+        opened={dialogOpened}
+        onClose={handleCloseDialog}
+        onSave={handleSaveMeal}
+        meal={editingMeal}
+        recipes={recipes}
+        allItems={allItems}
+      />
+    </>
   );
 }

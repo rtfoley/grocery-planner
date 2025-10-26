@@ -15,6 +15,7 @@ export function Navigation() {
   const { colorScheme, toggleColorScheme } = useMantineColorScheme()
   const [opened, { open, close }] = useDisclosure(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [mounted, setMounted] = useState(false)
   const { groupName } = useUserGroup()
   const router = useRouter()
 
@@ -26,6 +27,8 @@ export function Navigation() {
   ]
 
   useEffect(() => {
+    setMounted(true)
+
     const supabase = createClient()
 
     const getUser = async () => {
@@ -112,14 +115,16 @@ export function Navigation() {
               </Menu>
             )}
 
-            <ActionIcon
-              onClick={toggleColorScheme}
-              variant="subtle"
-              size="lg"
-              aria-label="Toggle color scheme"
-            >
-              {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
-            </ActionIcon>
+            {mounted && (
+              <ActionIcon
+                onClick={toggleColorScheme}
+                variant="subtle"
+                size="lg"
+                aria-label="Toggle color scheme"
+              >
+                {colorScheme === 'dark' ? <IconSun size={20} /> : <IconMoon size={20} />}
+              </ActionIcon>
+            )}
           </Group>
         </Group>
       </Container>

@@ -5,11 +5,12 @@ import { useEffect, useState } from 'react'
 import { Title, Group, Button, Grid, Text, Stack, Modal, Loader, Center, Paper, Select } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
 import { IconCalendar } from '@tabler/icons-react'
-import { AdhocItemWithItem, ItemExclusionWithItem, MealAssignmentWithRecipe, MealSideItemWithItem, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
+import { AdhocItemWithItem, ItemExclusionWithItem, MealWithDetails, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
-import { addItemExclusion, createAdhocItem, createMealAssignment, createMealSideItem, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMealAssignment, deleteMealSideItem, getAdhocItems, getItemExclusions, getMealAssignments, getMealSideItems, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateMealAssignment, updateStapleSelection } from '@/lib/actions'
+import { addItemExclusion, createAdhocItem, createMeal, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMeal, getAdhocItems, getItemExclusions, getMeals, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateStapleSelection, addRecipeToMeal, addItemToMeal, removeRecipeFromMeal, removeMealItem, updateMeal } from '@/lib/actions'
 import { MealList } from './MealList'
+import { MealDialogData } from './MealDialog'
 import { useDisclosure } from '@mantine/hooks'
 import { getAdjustedDateFromString } from '@/lib/utilities'
 
@@ -22,9 +23,9 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   // State management
   const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [planningSessionId, setPlanningSessionId] = useState<string | undefined>();
+  const [currentSession, setCurrentSession] = useState<{id: string, start_date: string, end_date: string} | null>(null);
   const [allSessions, setAllSessions] = useState<Array<{id: string, start_date: string, end_date: string}>>([]);
-  const [mealAssignments, setMealAssignments] = useState<MealAssignmentWithRecipe[]>([]);
-  const [mealSideItems, setMealSideItems] = useState<MealSideItemWithItem[]>([]);
+  const [meals, setMeals] = useState<MealWithDetails[]>([]);
   const [stapleSelections, setStapleSelections] = useState<StapleSelectionWithItem[]>([]);
   const [excludedItems, setExcludedItems] = useState<ItemExclusionWithItem[]>([]);
   const [adHocItems, setAdHocItems] = useState<AdhocItemWithItem[]>([])
@@ -70,12 +71,10 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       if (!planningSession) return;
 
       setPlanningSessionId(planningSession.id);
+      setCurrentSession(planningSession);
 
-      const assignments = await getMealAssignments(planningSession.id);
-      setMealAssignments(assignments);
-
-      const sideItems = await getMealSideItems(planningSession.id);
-      setMealSideItems(sideItems);
+      const mealsData = await getMeals(planningSession.id);
+      setMeals(mealsData);
 
       // TODO check for staples that have been added that don't yet have selection records
       const staples = await getStapleSelections(planningSession.id);
@@ -91,11 +90,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     }
   }
 
-  const getDaysBetween = (start: Date, end: Date): number => {
-    const oneDay = 24 * 60 * 60 * 1000;
-    return Math.ceil((end.getTime() - start.getTime()) / oneDay) + 1; // +1 to include both dates
-  };
-
   const startNewSession = async () => {
     if (!dateRange || !dateRange[0] || !dateRange[1]) {
       return;
@@ -105,40 +99,29 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     try {
       const start = new Date(dateRange[0]);
       const end = new Date(dateRange[1]);
-      const dayCount = getDaysBetween(start, end);
 
       const planningSession = await createPlanningSession(
-      start.toISOString().split('T')[0],
-      end.toISOString().split('T')[0]
-    );
-    if (!planningSession) return;
-
-    setPlanningSessionId(planningSession.id);
-
-    const tempMealAssignments: MealAssignmentWithRecipe[] = [];
-    for (let i = 0; i < dayCount; i++) {
-      const date = new Date(start.getTime() + (i * 24 * 60 * 60 * 1000));
-      const assignment = await createMealAssignment(
-        planningSession.id,
-        null,
-        date.toISOString().split('T')[0]
+        start.toISOString().split('T')[0],
+        end.toISOString().split('T')[0]
       );
-      if (assignment) {
-        tempMealAssignments.push(assignment);
-      }
-    }
+      if (!planningSession) return;
 
-    setMealAssignments(tempMealAssignments);
+      setPlanningSessionId(planningSession.id);
+      setCurrentSession(planningSession);
 
-    const tempStapleSelections: StapleSelectionWithItem[] = [];
-    for (const item of allItems) {
-      if (item.is_staple) {
-        const stapleSelection = await createStapleSelection(planningSession.id, item.id, StapleStatusEnum.PENDING);
-        if (stapleSelection) {
-          tempStapleSelections.push(stapleSelection);
+      // No pre-created meals - user adds them as needed
+      setMeals([]);
+
+      // Create staple selections
+      const tempStapleSelections: StapleSelectionWithItem[] = [];
+      for (const item of allItems) {
+        if (item.is_staple) {
+          const stapleSelection = await createStapleSelection(planningSession.id, item.id, StapleStatusEnum.PENDING);
+          if (stapleSelection) {
+            tempStapleSelections.push(stapleSelection);
+          }
         }
       }
-    }
 
       setStapleSelections(tempStapleSelections);
       setExcludedItems([]);
@@ -197,8 +180,8 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   }
 
   const handleStapleSelection = async (stapleSelection: StapleSelectionWithItem, newStatus: StapleStatus) => {
-    setStapleSelections(prev => 
-      prev.map(selection => 
+    setStapleSelections(prev =>
+      prev.map(selection =>
         selection.item_id === stapleSelection.item_id
           ? { ...selection, status: newStatus }
           : selection
@@ -209,52 +192,105 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     await updateStapleSelection(stapleSelection.planning_session_id!, stapleSelection.item_id, newStatus);
   }
 
-  const handleRecipeChange = async (assignment: MealAssignmentWithRecipe, recipeId: string | null) =>
-  {
-    setMealAssignments(prev =>
-      prev.map(existingAssignment =>
-        existingAssignment.id === assignment.id
-          ? { ...existingAssignment, recipe_id: recipeId }
-          : existingAssignment
-      )
-    );
-
-    await updateMealAssignment(assignment.id, recipeId);
-  }
-
-  const handleAddMeal = async (date: string | null) => {
+  const handleAddMeal = async (date: string | null, mealData: MealDialogData) => {
     if (!planningSessionId) return;
 
-    const newAssignment = await createMealAssignment(planningSessionId, null, date);
+    // Create the meal
+    const newMeal = await createMeal(planningSessionId, date, mealData.name);
+    if (!newMeal) return;
 
-    if (newAssignment) {
-      setMealAssignments(prev => [...prev, newAssignment]);
+    // Add recipes to meal
+    for (const recipeName of mealData.recipeNames) {
+      const recipe = recipes.find(r => r.name === recipeName);
+      if (recipe) {
+        await addRecipeToMeal(newMeal.id, recipe.id);
+      }
     }
+
+    // Add items to meal
+    for (const item of mealData.items) {
+      const foundItem = allItems.find(i => i.name === item.name);
+      if (foundItem) {
+        await addItemToMeal(newMeal.id, foundItem.id, item.amount || null);
+      }
+    }
+
+    // Reload meals to get complete data
+    const updatedMeals = await getMeals(planningSessionId);
+    setMeals(updatedMeals);
   }
 
-  const handleRemoveMeal = async (assignmentId: string) => {
-    setMealAssignments(prev => prev.filter(a => a.id !== assignmentId));
-    await deleteMealAssignment(assignmentId);
-  }
-
-  const handleAddSideItem = async (date: string | null, itemId: string, amount: string) => {
+  const handleUpdateMeal = async (mealId: string, mealData: MealDialogData) => {
     if (!planningSessionId) return;
 
-    const newSideItem = await createMealSideItem(planningSessionId, date, itemId, amount || null);
+    const existingMeal = meals.find(m => m.id === mealId);
+    if (!existingMeal) return;
 
-    if (newSideItem) {
-      setMealSideItems(prev => [...prev, newSideItem]);
+    // Update meal name if changed
+    if (mealData.name !== (existingMeal.name || '')) {
+      await updateMeal(mealId, { name: mealData.name });
     }
+
+    // Determine recipe changes
+    const existingRecipeNames = existingMeal.meal_recipes?.map(mr => mr.recipe.name) || [];
+    const newRecipeNames = mealData.recipeNames;
+
+    // Remove recipes no longer in the meal
+    for (const mr of existingMeal.meal_recipes || []) {
+      if (!newRecipeNames.includes(mr.recipe.name)) {
+        await removeRecipeFromMeal(mr.id);
+      }
+    }
+
+    // Add new recipes
+    for (const recipeName of newRecipeNames) {
+      if (!existingRecipeNames.includes(recipeName)) {
+        const recipe = recipes.find(r => r.name === recipeName);
+        if (recipe) {
+          await addRecipeToMeal(mealId, recipe.id);
+        }
+      }
+    }
+
+    // Determine item changes
+    const existingItems = existingMeal.meal_items?.map(mi => ({ name: mi.item.name, amount: mi.amount || '' })) || [];
+    const newItems = mealData.items;
+
+    // Remove items no longer in the meal
+    for (const mi of existingMeal.meal_items || []) {
+      if (!newItems.some(item => item.name === mi.item.name)) {
+        await removeMealItem(mi.id);
+      }
+    }
+
+    // Add new items or update amounts
+    for (const item of newItems) {
+      const existingMealItem = existingMeal.meal_items?.find(mi => mi.item.name === item.name);
+      if (existingMealItem) {
+        // Item exists - check if amount changed
+        // (Note: we're not implementing updateMealItem here, but could add it)
+      } else {
+        // New item - add it
+        const foundItem = allItems.find(i => i.name === item.name);
+        if (foundItem) {
+          await addItemToMeal(mealId, foundItem.id, item.amount || null);
+        }
+      }
+    }
+
+    // Reload meals to get complete data
+    const updatedMeals = await getMeals(planningSessionId);
+    setMeals(updatedMeals);
   }
 
-  const handleRemoveSideItem = async (sideItemId: string) => {
-    setMealSideItems(prev => prev.filter(s => s.id !== sideItemId));
-    await deleteMealSideItem(sideItemId);
+  const handleDeleteMeal = async (mealId: string) => {
+    setMeals(prev => prev.filter(m => m.id !== mealId));
+    await deleteMeal(mealId);
   }
 
-  const selectedRecipes = mealAssignments
-    .filter(assignment => assignment.recipe_id)
-    .map(assignment => recipes.find(r => r.id === assignment.recipe_id)!)
+  // Extract selected recipes from meals for shopping list
+  const selectedRecipes = meals
+    .flatMap(meal => meal.meal_recipes?.map(mr => mr.recipe) || [])
     .filter(Boolean)
 
   const openModal = () => {
@@ -359,15 +395,14 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
         <Grid>
           <Grid.Col span={{ base: 12, md: 4 }}>
             <MealList
-              mealAssignments={mealAssignments}
-              mealSideItems={mealSideItems}
+              meals={meals}
+              sessionStartDate={currentSession?.start_date || null}
+              sessionEndDate={currentSession?.end_date || null}
               recipes={recipes}
               allItems={allItems}
-              onRecipeChange={handleRecipeChange}
               onAddMeal={handleAddMeal}
-              onRemoveMeal={handleRemoveMeal}
-              onAddSideItem={handleAddSideItem}
-              onRemoveSideItem={handleRemoveSideItem}
+              onUpdateMeal={handleUpdateMeal}
+              onDeleteMeal={handleDeleteMeal}
             />
           </Grid.Col>
 
@@ -388,7 +423,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
             onAddAdHocItem={addAdHocItem}
             onUpdateAdhocItem={updateAddhocItemAmount}
             onRemoveAdHocItem={removeAdHocItem}
-            mealSideItems={mealSideItems}
+            meals={meals}
             stapleSelections={stapleSelections}
             allItems={allItems}
           />

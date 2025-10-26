@@ -229,31 +229,31 @@ This simplified approach eliminates:
 
 ### Part 2: TypeScript Types & Actions
 
-- [ ] **2.1**: Add TypeScript types (types.ts)
-  - [ ] Import and re-export auto-generated base types from database.types.ts:
-    - [ ] `Meal = Tables['meals']['Row']`
-    - [ ] `MealRecipe = Tables['meal_recipes']['Row']`
-    - [ ] `MealItem = Tables['meal_items']['Row']`
-  - [ ] Define composite types (relationships not auto-generated):
-    - [ ] `MealWithDetails` - Meal with related meal_recipes and meal_items
-    - [ ] Inline type definitions for meal_recipes array items (with recipe relation)
-    - [ ] Inline type definitions for meal_items array items (with item relation)
+- [x] **2.1**: Add TypeScript types (types.ts)
+  - [x] Import and re-export auto-generated base types from database.types.ts:
+    - [x] `Meal = Tables['meals']['Row']`
+    - [x] `MealRecipe = Tables['meal_recipes']['Row']`
+    - [x] `MealItem = Tables['meal_items']['Row']`
+  - [x] Define composite types (relationships not auto-generated):
+    - [x] `MealWithDetails` - Meal with related meal_recipes and meal_items
+    - [x] Inline type definitions for meal_recipes array items (with recipe relation)
+    - [x] Inline type definitions for meal_items array items (with item relation)
 
-- [ ] **2.2**: Create meal server actions (actions.ts)
-  - [ ] `createMeal(sessionId, date, name?)` → creates empty meal
-  - [ ] `getMeal(mealId)` → returns MealWithDetails
-  - [ ] `getMeals(sessionId)` → returns all meals for session with full details
-  - [ ] `updateMeal(mealId, name?, date?)` → update meal metadata
-  - [ ] `deleteMeal(mealId)` → cascades to meal_recipes and meal_items
+- [x] **2.2**: Create meal server actions (actions.ts)
+  - [x] `createMeal(sessionId, date, name?)` → creates empty meal
+  - [x] `getMeal(mealId)` → returns MealWithDetails
+  - [x] `getMeals(sessionId)` → returns all meals for session with full details
+  - [x] `updateMeal(mealId, name?, date?)` → update meal metadata
+  - [x] `deleteMeal(mealId)` → cascades to meal_recipes and meal_items
 
-- [ ] **2.3**: Create meal_recipes server actions
-  - [ ] `addRecipeToMeal(mealId, recipeId)` → adds recipe to meal
-  - [ ] `removeRecipeFromMeal(mealRecipeId)` → removes recipe from meal
+- [x] **2.3**: Create meal_recipes server actions
+  - [x] `addRecipeToMeal(mealId, recipeId)` → adds recipe to meal
+  - [x] `removeRecipeFromMeal(mealRecipeId)` → removes recipe from meal
 
-- [ ] **2.4**: Create meal_items server actions
-  - [ ] `addItemToMeal(mealId, itemId, amount)` → adds individual item
-  - [ ] `updateMealItem(mealItemId, amount)` → updates amount
-  - [ ] `removeMealItem(mealItemId)` → removes item
+- [x] **2.4**: Create meal_items server actions
+  - [x] `addItemToMeal(mealId, itemId, amount)` → adds individual item
+  - [x] `updateMealItem(mealItemId, amount)` → updates amount
+  - [x] `removeMealItem(mealItemId)` → removes item
 
 ### Part 3: UI Components
 

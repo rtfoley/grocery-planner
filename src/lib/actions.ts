@@ -450,67 +450,6 @@ export async function getPlanningSession(sessionId: string) {
   return data || null
 }
 
-// Meal assignment actions
-export async function createMealAssignment(planningSessionId: string, recipeId: string | null, date: string | null) {
-  const groupId = await getUserGroupId()
-  if (!groupId) return null
-
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('meal_assignments')
-    .insert({
-      planning_session_id: planningSessionId,
-      recipe_id: recipeId,
-      date: date
-    })
-    .select(`
-      *,
-      recipe:recipes (*)
-    `)
-    .single()
-
-  return data || null
-}
-
-export async function getMealAssignments(planningSessionId: string) {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('meal_assignments')
-    .select(`
-      *,
-      recipe:recipes (*)
-    `)
-    .eq('planning_session_id', planningSessionId)
-
-  return data || []
-}
-
-export async function updateMealAssignment(assignmentId: string, recipeId: string | null) {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('meal_assignments')
-    .update({ recipe_id: recipeId })
-    .eq('id', assignmentId)
-    .select()
-    .single()
-
-  return data || null
-}
-
-export async function deleteMealAssignment(assignmentId: string) {
-  const supabase = await createClient()
-
-  const { error } = await supabase
-    .from('meal_assignments')
-    .delete()
-    .eq('id', assignmentId)
-
-  return { success: !error }
-}
-
 // Staple selection actions
 export async function createStapleSelection(planningSessionId: string, itemId: string, status: StapleStatus) {
   const supabase = await createClient()
@@ -692,15 +631,144 @@ export async function deleteItemExclusion(planningSessionId: string, itemId: str
   return { success: !error }
 }
 
-// Meal side item actions
-export async function createMealSideItem(planningSessionId: string, date: string | null, itemId: string, amount: string | null) {
+// ============================================================================
+// MEAL-CENTRIC ACTIONS
+// ============================================================================
+
+// Meal actions
+export async function createMeal(planningSessionId: string, date: string | null, name?: string) {
   const supabase = await createClient()
 
   const { data } = await supabase
-    .from('meal_side_items')
+    .from('meals')
     .insert({
       planning_session_id: planningSessionId,
       date: date,
+      name: name || null
+    })
+    .select()
+    .single()
+
+  return data || null
+}
+
+export async function getMeal(mealId: string) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meals')
+    .select(`
+      *,
+      meal_recipes (
+        id,
+        recipe:recipes (
+          *,
+          recipe_items (
+            amount,
+            item:items (*)
+          )
+        )
+      ),
+      meal_items (
+        id,
+        amount,
+        item:items (*)
+      )
+    `)
+    .eq('id', mealId)
+    .single()
+
+  return data || null
+}
+
+export async function getMeals(planningSessionId: string) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meals')
+    .select(`
+      *,
+      meal_recipes (
+        id,
+        recipe:recipes (
+          *,
+          recipe_items (
+            amount,
+            item:items (*)
+          )
+        )
+      ),
+      meal_items (
+        id,
+        amount,
+        item:items (*)
+      )
+    `)
+    .eq('planning_session_id', planningSessionId)
+    .order('date', { ascending: true, nullsFirst: false })
+
+  return data || []
+}
+
+export async function updateMeal(mealId: string, updates: { name?: string, date?: string | null }) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meals')
+    .update(updates)
+    .eq('id', mealId)
+    .select()
+    .single()
+
+  return data || null
+}
+
+export async function deleteMeal(mealId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('meals')
+    .delete()
+    .eq('id', mealId)
+
+  return { success: !error }
+}
+
+// Meal recipe actions
+export async function addRecipeToMeal(mealId: string, recipeId: string) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meal_recipes')
+    .insert({
+      meal_id: mealId,
+      recipe_id: recipeId
+    })
+    .select()
+    .single()
+
+  return data || null
+}
+
+export async function removeRecipeFromMeal(mealRecipeId: string) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from('meal_recipes')
+    .delete()
+    .eq('id', mealRecipeId)
+
+  return { success: !error }
+}
+
+// Meal item actions
+export async function addItemToMeal(mealId: string, itemId: string, amount: string | null) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('meal_items')
+    .insert({
+      meal_id: mealId,
       item_id: itemId,
       amount: amount
     })
@@ -713,40 +781,26 @@ export async function createMealSideItem(planningSessionId: string, date: string
   return data || null
 }
 
-export async function getMealSideItems(planningSessionId: string) {
+export async function updateMealItem(mealItemId: string, amount: string | null) {
   const supabase = await createClient()
 
   const { data } = await supabase
-    .from('meal_side_items')
-    .select(`
-      *,
-      item:items (*)
-    `)
-    .eq('planning_session_id', planningSessionId)
-
-  return data || []
-}
-
-export async function updateMealSideItem(sideItemId: string, amount: string | null) {
-  const supabase = await createClient()
-
-  const { data } = await supabase
-    .from('meal_side_items')
+    .from('meal_items')
     .update({ amount })
-    .eq('id', sideItemId)
+    .eq('id', mealItemId)
     .select()
     .single()
 
   return data || null
 }
 
-export async function deleteMealSideItem(sideItemId: string) {
+export async function removeMealItem(mealItemId: string) {
   const supabase = await createClient()
 
   const { error } = await supabase
-    .from('meal_side_items')
+    .from('meal_items')
     .delete()
-    .eq('id', sideItemId)
+    .eq('id', mealItemId)
 
   return { success: !error }
 }

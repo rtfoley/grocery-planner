@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import Link from 'next/link'
-import { AdhocItemWithItem, ItemExclusionWithItem, MealSideItemWithItem, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
+import { AdhocItemWithItem, ItemExclusionWithItem, MealWithDetails, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
 import { ItemAutocomplete } from './ItemAutocomplete'
 
 interface ShoppingListProps {
@@ -17,7 +17,7 @@ interface ShoppingListProps {
   onAddAdHocItem?: (itemName: string, amount: string) => void
   onUpdateAdhocItem?: (updatedItem: AdhocItemWithItem) => void
   onRemoveAdHocItem?: (removedItem: AdhocItemWithItem) => void
-  mealSideItems?: MealSideItemWithItem[]
+  meals?: MealWithDetails[]
   stapleSelections?: StapleSelectionWithItem[]
   allItems?: Item[]
 }
@@ -40,7 +40,7 @@ export function ShoppingList({
   adHocItems = [],
   onAddAdHocItem,
   onRemoveAdHocItem,
-  mealSideItems = [],
+  meals = [],
   stapleSelections,
   allItems = []
 }: ShoppingListProps) {
@@ -110,24 +110,25 @@ export function ShoppingList({
       items.push(...deduplicatedStaples)
     }
 
-    // Add meal side items
-    const sideDisplayItems: ShoppingItem[] = mealSideItems.map(sideItem => ({
-      itemName: sideItem.item.name,
-      amounts: sideItem.amount ? [sideItem.amount] : [],
-      recipeCount: 0, // Indicates this is a side item
+    // Add meal items from meals
+    const mealItemsFlattened = meals.flatMap(meal => meal.meal_items || []);
+    const mealDisplayItems: ShoppingItem[] = mealItemsFlattened.map(mealItem => ({
+      itemName: mealItem.item.name,
+      amounts: mealItem.amount ? [mealItem.amount] : [],
+      recipeCount: 0, // Indicates this is a meal item
       isSide: true,
-      orderIndex: orderLookup.get(sideItem.item.name)
+      orderIndex: orderLookup.get(mealItem.item.name)
     }))
 
     items.forEach((item) => {
-      if(sideDisplayItems.find(x => x.itemName === item.itemName))
+      if(mealDisplayItems.find(x => x.itemName === item.itemName))
       {
         item.isSide = true;
       }
     })
 
-    const deduplicatedSideItems = sideDisplayItems.filter(side => !items.find(x => x.itemName === side.itemName));
-    items.push(...deduplicatedSideItems)
+    const deduplicatedMealItems = mealDisplayItems.filter(mealItem => !items.find(x => x.itemName === mealItem.itemName));
+    items.push(...deduplicatedMealItems)
 
     // Add ad-hoc items
     const adHocDisplayItems: ShoppingItem[] = adHocItems.map(adhocItem => ({
@@ -139,7 +140,7 @@ export function ShoppingList({
     }))
 
     return [...items, ...adHocDisplayItems]
-  }, [recipeShoppingItems, stapleSelections, mealSideItems, adHocItems, orderLookup])
+  }, [recipeShoppingItems, stapleSelections, meals, adHocItems, orderLookup])
 
   // Sort items based on selected mode
   const sortedItems = useMemo(() => {
