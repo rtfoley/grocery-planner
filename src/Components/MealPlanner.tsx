@@ -253,7 +253,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     }
 
     // Determine item changes
-    const existingItems = existingMeal.meal_items?.map(mi => ({ name: mi.item.name, amount: mi.amount || '' })) || [];
     const newItems = mealData.items;
 
     // Remove items no longer in the meal

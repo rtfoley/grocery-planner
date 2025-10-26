@@ -333,17 +333,17 @@ This simplified approach eliminates:
   - [ ] Test meal with only recipes (no items)
   - [ ] Test meal with only items (no recipes)
 
-- [ ] **5.2**: Remove deprecated code
-  - [ ] Remove `createMealAssignment` action
-  - [ ] Remove `getMealAssignments` action
-  - [ ] Remove `updateMealAssignment` action
-  - [ ] Remove `deleteMealAssignment` action
-  - [ ] Remove `createMealSideItem` action
-  - [ ] Remove `getMealSideItems` action
-  - [ ] Remove `updateMealSideItem` action
-  - [ ] Remove `deleteMealSideItem` action
-  - [ ] Remove old type definitions (MealAssignment, MealAssignmentWithRecipe, MealSideItem, MealSideItemWithItem)
-  - [ ] Search codebase for any remaining references to old types/actions
+- [x] **5.2**: Remove deprecated code
+  - [x] Remove `createMealAssignment` action
+  - [x] Remove `getMealAssignments` action
+  - [x] Remove `updateMealAssignment` action
+  - [x] Remove `deleteMealAssignment` action
+  - [x] Remove `createMealSideItem` action
+  - [x] Remove `getMealSideItems` action
+  - [x] Remove `updateMealSideItem` action
+  - [x] Remove `deleteMealSideItem` action
+  - [x] Remove old type definitions (MealAssignment, MealAssignmentWithRecipe, MealSideItem, MealSideItemWithItem)
+  - [x] Search codebase for any remaining references to old types/actions
 
 - [ ] **5.3**: Documentation
   - [ ] Update SupabaseMigration.md (mark meal refactor as complete)
