@@ -257,67 +257,67 @@ This simplified approach eliminates:
 
 ### Part 3: UI Components
 
-- [ ] **3.1**: Create MealCard component
-  - [ ] Display meal name (if set) or show generic label
-  - [ ] Display all recipes as comma-separated list
-  - [ ] Display individual items with amounts
-  - [ ] Edit and Delete buttons
-  - [ ] Handle empty meals gracefully (show placeholder)
-  - [ ] Use Mantine Card component for styling
+- [x] **3.1**: Create MealCard component
+  - [x] Display meal name (if set) or show generic label
+  - [x] Display all recipes as comma-separated list
+  - [x] Display individual items with amounts
+  - [x] Edit and Delete buttons
+  - [x] Handle empty meals gracefully (show placeholder)
+  - [x] Use Mantine Card component for styling
 
-- [ ] **3.2**: Create MealDialog component (Add/Edit)
-  - [ ] Modal wrapper using Mantine Modal
-  - [ ] Meal name TextInput (optional)
-  - [ ] "Recipes" section:
-    - [ ] RecipeAutocomplete or Select component
-    - [ ] "Add Recipe" button
-    - [ ] List of added recipes with remove icons
-  - [ ] "Additional Items" section:
-    - [ ] ItemAutocomplete component
-    - [ ] Amount TextInput
-    - [ ] "Add Item" button
-    - [ ] List of added items with amounts and remove icons
-  - [ ] Save and Cancel buttons
-  - [ ] Form state management
-  - [ ] Handle edit mode (pre-populate with meal data)
+- [x] **3.2**: Create MealDialog component (Add/Edit)
+  - [x] Modal wrapper using Mantine Modal
+  - [x] Meal name TextInput (optional)
+  - [x] "Recipes" section:
+    - [x] RecipeAutocomplete or Select component
+    - [x] "Add Recipe" button
+    - [x] List of added recipes with remove icons
+  - [x] "Additional Items" section:
+    - [x] ItemAutocomplete component
+    - [x] Amount TextInput
+    - [x] "Add Item" button
+    - [x] List of added items with amounts and remove icons
+  - [x] Save and Cancel buttons
+  - [x] Form state management
+  - [x] Handle edit mode (pre-populate with meal data)
 
-- [ ] **3.3**: Update MealList component
-  - [ ] Remove old meal assignment Select dropdowns
-  - [ ] Remove old side item inline form UI
-  - [ ] Group MealCards by date
-  - [ ] Add "Add Meal" button per date section
-  - [ ] Open MealDialog on "Add Meal" click
-  - [ ] Pass meal data to dialog for editing
-  - [ ] Handle meal dialog open/close state
+- [x] **3.3**: Update MealList component
+  - [x] Remove old meal assignment Select dropdowns
+  - [x] Remove old side item inline form UI
+  - [x] Group MealCards by date
+  - [x] Add "Add Meal" button per date section
+  - [x] Open MealDialog on "Add Meal" click
+  - [x] Pass meal data to dialog for editing
+  - [x] Handle meal dialog open/close state
 
-- [ ] **3.4**: Update MealPlanner component
-  - [ ] Replace `mealAssignments` state with `meals` state
-  - [ ] Remove `mealSideItems` state (now part of meals)
-  - [ ] Update `loadSession` to call `getMeals(sessionId)`
-  - [ ] Implement `handleCreateMeal` (calls createMeal + updates state)
-  - [ ] Implement `handleUpdateMeal` (updates meal, recipes, items)
-  - [ ] Implement `handleDeleteMeal` (calls deleteMeal + updates state)
-  - [ ] Remove `startNewSession` pre-creation of meal slots
-  - [ ] Pass meal handlers to MealList
+- [x] **3.4**: Update MealPlanner component
+  - [x] Replace `mealAssignments` state with `meals` state
+  - [x] Remove `mealSideItems` state (now part of meals)
+  - [x] Update `loadSession` to call `getMeals(sessionId)`
+  - [x] Implement `handleCreateMeal` (calls createMeal + updates state)
+  - [x] Implement `handleUpdateMeal` (updates meal, recipes, items)
+  - [x] Implement `handleDeleteMeal` (calls deleteMeal + updates state)
+  - [x] Remove `startNewSession` pre-creation of meal slots
+  - [x] Pass meal handlers to MealList
 
 ### Part 4: Shopping List Integration
 
-- [ ] **4.1**: Update ShoppingList component
-  - [ ] Accept `meals` prop instead of `mealAssignments` and `mealSideItems`
-  - [ ] Remove old meal_assignments aggregation logic
-  - [ ] Remove old meal_side_items aggregation logic
-  - [ ] Add new aggregation for meal recipes (extract all recipes from meals)
-  - [ ] Add new aggregation for meal items (extract all items from meals)
-  - [ ] Ensure proper deduplication across recipe items, meal items, staples, and adhoc items
-  - [ ] Update dependencies array in useMemo hooks
+- [x] **4.1**: Update ShoppingList component
+  - [x] Accept `meals` prop instead of `mealAssignments` and `mealSideItems`
+  - [x] Remove old meal_assignments aggregation logic
+  - [x] Remove old meal_side_items aggregation logic
+  - [x] Add new aggregation for meal recipes (extract all recipes from meals)
+  - [x] Add new aggregation for meal items (extract all items from meals)
+  - [x] Ensure proper deduplication across recipe items, meal items, staples, and adhoc items
+  - [x] Update dependencies array in useMemo hooks
 
-- [ ] **4.2**: Update MealPlanner to pass meals to ShoppingList
-  - [ ] Pass `meals` prop to ShoppingList
-  - [ ] Remove `mealAssignments` and `mealSideItems` props from ShoppingList
+- [x] **4.2**: Update MealPlanner to pass meals to ShoppingList
+  - [x] Pass `meals` prop to ShoppingList
+  - [x] Remove `mealAssignments` and `mealSideItems` props from ShoppingList
 
-- [ ] **4.3**: Update formatItem display logic (optional enhancement)
-  - [ ] Consider showing which meals an item appears in
-  - [ ] Update flags if needed
+- [x] **4.3**: Update formatItem display logic (optional enhancement)
+  - [x] Consider showing which meals an item appears in
+  - [x] Update flags if needed
 
 ### Part 5: Testing & Cleanup
 
