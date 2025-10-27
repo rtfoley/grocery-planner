@@ -90,7 +90,7 @@ export function MealList({
     setAddingForDate(null);
     setDialogOpened(true);
   };
-
+  
   const handleSaveMeal = (mealData: MealDialogData) => {
     if (editingMeal) {
       // Update existing meal

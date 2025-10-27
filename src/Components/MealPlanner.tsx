@@ -220,20 +220,8 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     setMeals(updatedMeals);
   }
 
-  const handleUpdateMeal = async (mealId: string, mealData: MealDialogData) => {
-    if (!planningSessionId) return;
-
-    const existingMeal = meals.find(m => m.id === mealId);
-    if (!existingMeal) return;
-
-    // Update meal name if changed
-    if (mealData.name !== (existingMeal.name || '')) {
-      await updateMeal(mealId, { name: mealData.name });
-    }
-
-    // Determine recipe changes
+  const updateMealRecipes = async (mealId: string, existingMeal: MealWithDetails, newRecipeNames: string[]) => {
     const existingRecipeNames = existingMeal.meal_recipes?.map(mr => mr.recipe.name) || [];
-    const newRecipeNames = mealData.recipeNames;
 
     // Remove recipes no longer in the meal
     for (const mr of existingMeal.meal_recipes || []) {
@@ -251,10 +239,9 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
         }
       }
     }
+  }
 
-    // Determine item changes
-    const newItems = mealData.items;
-
+  const updateMealItems = async (mealId: string, existingMeal: MealWithDetails, newItems: Array<{ name: string; amount: string }>) => {
     // Remove items no longer in the meal
     for (const mi of existingMeal.meal_items || []) {
       if (!newItems.some(item => item.name === mi.item.name)) {
@@ -262,20 +249,32 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       }
     }
 
-    // Add new items or update amounts
+    // Add new items (note: not updating amounts for existing items)
     for (const item of newItems) {
       const existingMealItem = existingMeal.meal_items?.find(mi => mi.item.name === item.name);
-      if (existingMealItem) {
-        // Item exists - check if amount changed
-        // (Note: we're not implementing updateMealItem here, but could add it)
-      } else {
-        // New item - add it
+      if (!existingMealItem) {
         const foundItem = allItems.find(i => i.name === item.name);
         if (foundItem) {
           await addItemToMeal(mealId, foundItem.id, item.amount || null);
         }
       }
     }
+  }
+
+  const handleUpdateMeal = async (mealId: string, mealData: MealDialogData) => {
+    if (!planningSessionId) return;
+
+    const existingMeal = meals.find(m => m.id === mealId);
+    if (!existingMeal) return;
+
+    // Update meal name if changed
+    if (mealData.name !== (existingMeal.name || '')) {
+      await updateMeal(mealId, { name: mealData.name });
+    }
+
+    // Update recipes and items
+    await updateMealRecipes(mealId, existingMeal, mealData.recipeNames);
+    await updateMealItems(mealId, existingMeal, mealData.items);
 
     // Reload meals to get complete data
     const updatedMeals = await getMeals(planningSessionId);
