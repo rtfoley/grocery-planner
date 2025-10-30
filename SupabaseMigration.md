@@ -673,14 +673,19 @@ app/
 - [ ] progress indicators
 - [ ] When making a new planning session, offer to bring in unavailable items from previous session
 
-### Phase 7: Testing & Polish
+### Phase 7: Meal Planner Layout Improvements
+- [ ] Adjust meal planner layout on large screens: meal list full-width at top, staples and shopping list in two columns below
+- [ ] This gives more horizontal space for meal list (helpful for future calendar-style view)
+- [ ] Groups staples/shopping together as the "review" section
+
+### Phase 8: Testing & Polish
 - [ ] Multi-user data isolation testing
 - [ ] Date range and multiple meals testing
 - [ ] Error handling refinement
 - [x] Loading states for async operations
 - [ ] Mobile responsiveness check
 
-### Phase 8: Invitations
+### Phase 9: Invitations
 - [ ] Create `/settings/groups` page
 - [ ] Build invitation creation UI (owners only)
 - [ ] Build pending invitations banner/list
