@@ -10,8 +10,9 @@ import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
 import { addItemExclusion, createAdhocItem, createMeal, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMeal, getAdhocItems, getItemExclusions, getMeals, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateStapleSelection, addRecipeToMeal, addItemToMeal, removeRecipeFromMeal, removeMealItem, updateMeal } from '@/lib/actions'
 import { MealList } from './MealList'
+import { CalendarMealList } from './CalendarMealList'
 import { MealDialogData } from './MealDialog'
-import { useDisclosure } from '@mantine/hooks'
+import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { getAdjustedDateFromString } from '@/lib/utilities'
 
 interface MealPlannerProps {
@@ -296,6 +297,9 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     open();
   }
 
+  // Use calendar view on medium+ screens, list view on mobile
+  const isLargeScreen = useMediaQuery('(min-width: 768px)')
+
   return (
     <Stack gap="xl">
       <Modal opened={opened} onClose={close} title="New Session" centered
@@ -390,8 +394,20 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
           </Paper>
         </Center>
       ) : (
-        <Grid>
-          <Grid.Col span={{ base: 12, md: 4 }}>
+        <Stack gap="xl">
+          {/* Meal List - Full Width - Calendar on large screens, List on mobile */}
+          {isLargeScreen ? (
+            <CalendarMealList
+              meals={meals}
+              sessionStartDate={currentSession?.start_date || null}
+              sessionEndDate={currentSession?.end_date || null}
+              recipes={recipes}
+              allItems={allItems}
+              onAddMeal={handleAddMeal}
+              onUpdateMeal={handleUpdateMeal}
+              onDeleteMeal={handleDeleteMeal}
+            />
+          ) : (
             <MealList
               meals={meals}
               sessionStartDate={currentSession?.start_date || null}
@@ -402,31 +418,34 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
               onUpdateMeal={handleUpdateMeal}
               onDeleteMeal={handleDeleteMeal}
             />
-          </Grid.Col>
+          )}
 
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <StaplesSelector
-            stapleSelections={stapleSelections}
-            onStapleSelection={handleStapleSelection}
-          />
-        </Grid.Col>
+          {/* Staples and Shopping List - Side by Side */}
+          <Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <StaplesSelector
+                stapleSelections={stapleSelections}
+                onStapleSelection={handleStapleSelection}
+              />
+            </Grid.Col>
 
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <ShoppingList
-            recipes={selectedRecipes}
-            excludedItems={excludedItems}
-            onExcludeItem={excludeItem}
-            onUnexcludeItem={unexcludeItem}
-            adHocItems={adHocItems}
-            onAddAdHocItem={addAdHocItem}
-            onUpdateAdhocItem={updateAddhocItemAmount}
-            onRemoveAdHocItem={removeAdHocItem}
-            meals={meals}
-            stapleSelections={stapleSelections}
-            allItems={allItems}
-          />
-        </Grid.Col>
-      </Grid>
+            <Grid.Col span={{ base: 12, md: 6 }}>
+              <ShoppingList
+                recipes={selectedRecipes}
+                excludedItems={excludedItems}
+                onExcludeItem={excludeItem}
+                onUnexcludeItem={unexcludeItem}
+                adHocItems={adHocItems}
+                onAddAdHocItem={addAdHocItem}
+                onUpdateAdhocItem={updateAddhocItemAmount}
+                onRemoveAdHocItem={removeAdHocItem}
+                meals={meals}
+                stapleSelections={stapleSelections}
+                allItems={allItems}
+              />
+            </Grid.Col>
+          </Grid>
+        </Stack>
       )}
     </Stack>
   )
