@@ -99,46 +99,35 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
   const handleToggleItem = async (itemId: string, checked: boolean) => {
     if (!sessionId) return
 
-    // Optimistic update - handle both existing items and new ones
+    // Optimistic update
+    const item = Array.from(neededItems.entries()).find(([id]) => id === itemId)?.[1]
     setShoppingListItems(prev => {
-      const existingIndex = prev.findIndex(si => si.item_id === itemId)
+      const existing = prev.find(si => si.item_id === itemId)
 
-      if (existingIndex >= 0) {
+      if (existing) {
         // Update existing item
-        return prev.map(si =>
-          si.item_id === itemId ? { ...si, checked } : si
-        )
-      } else {
-        // Item doesn't exist yet - find it in neededItems to add it
-        const item = Array.from(neededItems.entries()).find(([id]) => id === itemId)?.[1]
-        if (item) {
-          return [...prev, {
-            planning_session_id: sessionId,
-            item_id: itemId,
-            item,
-            checked,
-            id: '', // Will be set by DB
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }]
-        }
-        return prev
+        return prev.map(si => si.item_id === itemId ? { ...si, checked } : si)
+      } else if (item) {
+        // Add new item
+        return [...prev, {
+          planning_session_id: sessionId,
+          item_id: itemId,
+          item,
+          checked,
+          id: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]
       }
+      return prev
     })
 
-    // Persist to DB
+    // Persist to DB and replace with server response
     const result = await toggleShoppingListItem(sessionId, itemId, checked)
-
-    // Update with actual DB result if available
     if (result) {
-      setShoppingListItems(prev => {
-        const existingIndex = prev.findIndex(si => si.item_id === itemId)
-        if (existingIndex >= 0) {
-          return prev.map(si => si.item_id === itemId ? result : si)
-        } else {
-          return [...prev, result]
-        }
-      })
+      setShoppingListItems(prev =>
+        prev.map(si => si.item_id === itemId ? result : si)
+      )
     }
   }
 
