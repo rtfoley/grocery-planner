@@ -1,12 +1,21 @@
 # UI/UX Improvements Checklist
 
+## ✅ **Completed During Supabase Migration**
+- [x] Optimistic updates implemented in:
+  - ItemsManager (staple toggle, amount editing, item creation)
+  - RecipesList (delete with rollback)
+  - ShoppingListView (item toggling)
+  - StoreOrderManager (drag-and-drop with batch save)
+- [x] Mobile responsive layout for ItemsManager (vertical on small screens)
+- [x] Loading states in ItemsManager, RecipesList, ShoppingListView
+
 ## 🎯 **High-Impact Improvements**
 
 ### **1. Loading States & Feedback**
-- [ ] Add loading spinners for async operations (session creation, recipe saving, item additions)
+- [x] Optimistic updates - update UI immediately, then sync with server
 - [ ] Toast notifications for actions (recipe saved, item added, session created)
-- [ ] Optimistic updates - update UI immediately, then sync with server
-- [ ] Add loading state to "New Session" button (mentioned in TODO at MealPlanner.tsx:77)
+- [ ] Add loading spinners for remaining async operations (session creation)
+- [ ] Add loading state to "New Session" button
 
 ### **2. Empty States & Onboarding**
 - [ ] Enhanced empty states with illustrations and helpful CTAs:
@@ -31,6 +40,7 @@
 - [ ] Confirmation tooltips for destructive actions
 
 ### **5. Mobile Experience**
+- [x] Responsive layouts (ItemsManager uses vertical layout on mobile)
 - [ ] Swipe actions on mobile for delete/exclude operations
 - [ ] Fixed action buttons for critical actions (Add Recipe, Start Session)
 - [ ] Better thumb zones - ensure buttons are easily tappable
@@ -96,8 +106,12 @@ The application already has a solid foundation with Mantine components and good 
 
 Key files to modify for major improvements:
 - `src/Components/MealPlanner.tsx` - Main planning interface
-- `src/Components/ShoppingList.tsx` - Shopping list component
+- `src/Components/ShoppingListView.tsx` - Shopping list component (has optimistic updates ✓)
 - `src/Components/Navigation.tsx` - App navigation
 - `src/Components/RecipeForm.tsx` - Recipe creation/editing
-- `src/Components/RecipesList.tsx` - Recipe management
+- `src/Components/RecipesList.tsx` - Recipe management (has optimistic updates ✓)
+- `src/Components/ItemsManager.tsx` - Item management (has optimistic updates ✓)
+- `src/Components/StoreOrderManager.tsx` - Store ordering (has optimistic updates ✓)
 - `src/app/layout.tsx` - Global styling and theme
+
+**Note:** Now using Supabase backend with Row Level Security for multi-tenancy

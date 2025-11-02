@@ -12,19 +12,22 @@ Streamlines the process of planning meals and generating grocery lists by:
 
 ## Tech Stack
 
-- **Framework:** NextJS (App Router) with TypeScript (strict mode)
+- **Framework:** Next.js 15 (App Router) with TypeScript (strict mode)
 - **UI:** Mantine component library
-- **Database:** SQLite with Prisma ORM
-- **Deployment:** Raspberry Pi with PM2 process management
-- **Development:** Local machine → build → deploy to Pi
+- **Database:** Supabase (PostgreSQL) with Row Level Security
+- **Auth:** Supabase Auth (email/password)
+- **Deployment:** Vercel (frontend) + Supabase (backend)
+- **Multi-tenancy:** Shopping groups with owner/member roles
 
 ## Architecture Decisions
 
 - **Data Operations:** Server actions (no API routes)
-- **State Management:** React state (page-specific)
+- **State Management:** React state with optimistic updates
 - **Forms:** Mantine form system
-- **Database Location:** `./data/app.db` (project root)
-- **Schema Management:** Prisma migrations
+- **Database:** Supabase cloud PostgreSQL
+- **Schema Management:** Supabase migrations
+- **Authentication:** Supabase Auth middleware
+- **Security:** Row Level Security (RLS) for data isolation
 
 ## Data Model
 
@@ -94,66 +97,115 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] handle duplicate items across recipes and staples within a shopping list
 - [x] Session history and management
 
-### Slice 6: Usability Improvements
+### Slice 6: Usability Improvements ✅ COMPLETE
 - [x] Deleting recipes
 - [x] Add one-click export to iOS Notes app for offline mobile shopping
-- [x] allow user to specify start and end date of a session
-- [x] allow user to add extra meals that don't have a date specified
-- [x] allow user to add sides that are single ingredients
-- [x] allow user to add sides that are recipes
-- [ ] default shopping group names shoudl include owner email address (without domain)
+- [x] Allow user to specify start and end date of a session
+- [x] Allow user to add extra meals that don't have a date specified
+- [x] Allow user to add sides that are single ingredients
+- [x] Allow user to add sides that are recipes
 
-### Splice 7: Deployment
-- [ ] Pi deployment setup
-- [ ] PM2 process management configuration
+### Slice 7: Supabase Migration ✅ COMPLETE
+- [x] Migrate database to Supabase with multi-tenancy support
+- [x] Implement authentication system (signup/login)
+- [x] Add Row Level Security for data isolation
+- [x] Deploy frontend to Vercel
+- [x] Convert all Prisma queries to Supabase
+- [x] Implement optimistic UI updates
+- [x] Mobile shopping list view with progress tracking
+- [x] Group names use user email
 
-### Other Features
+### Slice 8: Invitation System & Polish 🚧 IN PROGRESS
+- [ ] **Invitations (High Priority)**
+  - [ ] Create `/settings/groups` page for group management
+  - [ ] Build invitation UI (owners can invite via email)
+  - [ ] Pending invitations banner with accept/decline
+  - [ ] Member list with remove functionality (owners only)
+  - [ ] Test complete invitation flow end-to-end
 
-- [ ] allow for multiple store orders (i.e. different locations of the same chain)
+- [ ] **Production Testing & Polish**
+  - [ ] Test all major features on Vercel production URL
+  - [ ] Error handling refinement across all components
+  - [ ] Mobile responsiveness check (all pages)
+  - [ ] Performance testing (query optimization)
 
-### Long-term cloud hosting
-- [ ] Migrate DB to Supabase, including support for multiple users/ families
-- [ ] Host frontend on Vercel, linked to Supabase
+- [ ] **UI/UX Quick Wins**
+  - [ ] Toast notifications for user actions (recipe saved, item added, etc.)
+  - [ ] Enhanced empty states with helpful CTAs
+  - [ ] Visual spacing improvements (card elevation, section dividers)
+  - [ ] Icon and color consistency across app
+
+### Future Enhancements
+
+- [ ] **Phase 1 UX Improvements**
+  - [ ] Mobile interaction improvements (swipe actions, better touch targets)
+  - [ ] Progress indicators for planning completion
+  - [ ] Micro-interactions and transitions
+  - [ ] Smart defaults (auto-save drafts, recently used items)
+
+- [ ] **Phase 2 Advanced Features**
+  - [ ] Keyboard shortcuts for power users
+  - [ ] Calendar view for meal planning
+  - [ ] Item count badges on navigation
+  - [ ] Undo/redo for accidental deletions
+  - [ ] **Multiple store orders** - Support different layouts for different store locations (e.g., different Wegmans locations)
+
+- [ ] **Post-MVP Ideas**
+  - [ ] Recipe import/export
+  - [ ] Nutritional information tracking
+  - [ ] Shopping history analysis
+  - [ ] Recipe scaling/serving adjustments
+  - [ ] Meal plan templates
 
 ## Installation & Development
 
 ### Prerequisites
 - Node.js 18+
 - npm or yarn
+- Supabase account (free tier)
 
 ### Local Development Setup
 ```bash
 # Clone and install dependencies
 npm install
 
-# Set up database
-npx prisma generate
-npx prisma migrate dev
+# Set up environment variables
+# Create .env.local with:
+# NEXT_PUBLIC_SUPABASE_URL=https://yourproject.supabase.co
+# NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Start development server
 npm run dev
 ```
 
-### Pi Deployment
+### Vercel Deployment
 ```bash
-# Build application
-npm run build
+# Push to GitHub
+git push origin main
 
-# Deploy to Pi (replace with your Pi details)
-rsync -av ./ pi@raspberrypi:/home/pi/grocery-planner/
-
-# On Pi: install and start with PM2
-pm2 start npm --name "grocery-planner" -- start
-pm2 save
+# Vercel auto-deploys from GitHub
+# Configure environment variables in Vercel dashboard:
+# - NEXT_PUBLIC_SUPABASE_URL
+# - NEXT_PUBLIC_SUPABASE_ANON_KEY
+# - SUPABASE_SERVICE_ROLE_KEY
 ```
+
+### Database Setup
+See `supabase.sql` in project root for complete schema. Run in Supabase SQL Editor to:
+- Create all tables with proper relationships
+- Set up Row Level Security (RLS) policies
+- Configure automatic group creation on user signup
 
 ## Database Schema
 
-See `prisma/schema.prisma` for the complete data model. Key relationships:
-- Recipe → RecipeItem → Item (many-to-many through junction table)
-- PlanningSession → MealAssignment → Recipe (meal planning)
-- PlanningSession → StapleSelection → Item (staples per session)
-- Item has optional staple status and store ordering
+See `supabase.sql` for the complete data model. Key relationships:
+- **Multi-tenancy:** All data scoped to `shopping_groups` with RLS enforcement
+- **Recipes:** Recipe → RecipeItem → Item (many-to-many through junction table)
+- **Meal Planning:** PlanningSession → Meals → MealRecipes/MealItems (flexible structure)
+- **Shopping Lists:** Aggregates from recipes, staples, adhoc items, and exclusions
+- **Invitations:** Pending invitations system with owner/member roles
+- **Authentication:** Supabase Auth with automatic group creation on signup
 
 ## Usage Workflow
 
@@ -167,17 +219,8 @@ See `prisma/schema.prisma` for the complete data model. Key relationships:
 ## Design Philosophy
 
 - **Functionality over aesthetics:** Focus on workflow efficiency
-- **Local network only:** No authentication, optimized for family use
+- **Cloud-based multi-tenancy:** Secure data isolation between families
+- **Optimistic UI updates:** Instant feedback for all user actions
 - **Progressive enhancement:** Build complexity incrementally
-- **Mobile-responsive:** Usable on phones during planning
-- **Print-friendly:** Shopping lists work on paper backup
-
-## Future Enhancements (Post-MVP)
-
-- Recipe import/export
-- Nutritional information tracking
-- Shopping history analysis
-- Multi-store support
-- Recipe scaling/serving adjustments
-- Meal plan templates
-- Calendar integration
+- **Mobile-first:** Optimized for in-store shopping on phones
+- **Collaborative:** Multiple family members can share and manage together
