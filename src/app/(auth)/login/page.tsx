@@ -29,7 +29,7 @@ export default function LoginPage() {
     setLoading(true)
 
     const supabase = createClient()
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
@@ -57,7 +57,7 @@ export default function LoginPage() {
     <Container size={420} my={40}>
       <Title ta="center">Welcome back</Title>
       <Text c="dimmed" size="sm" ta="center" mt={5}>
-        Don't have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Anchor size="sm" component={Link} href="/signup">
           Sign up
         </Anchor>

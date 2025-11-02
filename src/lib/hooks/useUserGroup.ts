@@ -39,7 +39,9 @@ export function useUserGroup() {
       if (data && data.length > 0 && !error) {
         const group = data[0]
         setGroupId(group.shopping_group_id)
-        setGroupName((group.shopping_groups as any)?.name || '')
+        const shoppingGroup = group.shopping_groups as { name: string }[] | { name: string } | null
+        const groupName = Array.isArray(shoppingGroup) ? shoppingGroup[0]?.name : shoppingGroup?.name
+        setGroupName(groupName || '')
         setUserRole(group.role as 'owner' | 'member')
       } else {
         // No group found - reset state

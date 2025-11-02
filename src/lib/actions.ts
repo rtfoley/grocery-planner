@@ -46,7 +46,7 @@ export async function createItem(name: string, is_staple: boolean = false, stapl
 
     revalidatePath('/items')
     return { success: true, item }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Item already exists or invalid name' }
   }
 }
@@ -88,7 +88,7 @@ export async function updateItemStapleStatus(id: string, is_staple: boolean, sta
 
     revalidatePath('/items')
     return { success: true, item }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to update staple status' }
   }
 }
@@ -113,7 +113,7 @@ export async function updateItemOrder(itemId: string, orderIndex: number) {
 
     revalidatePath('/store-order')
     return { success: true, item }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to update item order' }
   }
 }
@@ -137,7 +137,7 @@ export async function updateMultipleItemOrders(updates: Array<{ id: string, orde
 
     revalidatePath('/store-order')
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to update item orders' }
   }
 }
@@ -245,7 +245,7 @@ export async function updateRecipe(id: string, name: string, ingredients: Array<
 
     const existingMap = new Map(
       (existingItems || []).map(ri => [
-        (ri.item as any).name,
+        (ri.item as { name: string } | null)?.name || '',
         { item_id: ri.item_id, amount: ri.amount }
       ])
     )
@@ -349,7 +349,7 @@ export async function deleteRecipe(id: string) {
 
     revalidatePath('/recipes')
     return { success: true }
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Failed to delete recipe' }
   }
 }
