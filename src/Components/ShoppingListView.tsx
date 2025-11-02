@@ -22,7 +22,8 @@ import {
   MealWithDetails,
   StapleSelectionWithItem,
   ItemExclusionWithItem,
-  AdhocItemWithItem
+  AdhocItemWithItem,
+  Item
 } from '@/lib/types'
 import {
   getShoppingListItems,
@@ -34,7 +35,6 @@ import {
   getAdhocItems
 } from '@/lib/actions'
 import { getAdjustedDateFromString } from '@/lib/utilities'
-import { calculateNeededItems } from '@/lib/shoppingListUtils'
 import { ItemAutocomplete } from './ItemAutocomplete'
 
 interface ShoppingListViewProps {
@@ -142,13 +142,37 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
 
   // Calculate all needed items (excluding exclusions)
   const neededItems = useMemo(() => {
-    const allItems = calculateNeededItems(meals, staples, adhocItems)
+    const itemMap = new Map<string, Item>()
+
+    // Add items from meals (recipes + individual meal items)
+    meals.forEach(meal => {
+      meal.meal_recipes?.forEach(mr => {
+        mr.recipe.recipe_items?.forEach(ri => {
+          itemMap.set(ri.item.id, ri.item)
+        })
+      })
+      meal.meal_items?.forEach(mi => {
+        itemMap.set(mi.item.id, mi.item)
+      })
+    })
+
+    // Add included staples
+    staples.forEach(staple => {
+      if (staple.status === 'INCLUDED') {
+        itemMap.set(staple.item_id, staple.item)
+      }
+    })
+
+    // Add adhoc items
+    adhocItems.forEach(adhoc => {
+      itemMap.set(adhoc.item_id, adhoc.item)
+    })
 
     // Filter out excluded items
     const excludedIds = new Set(exclusions.map(e => e.item_id))
-    excludedIds.forEach(id => allItems.delete(id))
+    excludedIds.forEach(id => itemMap.delete(id))
 
-    return allItems
+    return itemMap
   }, [meals, staples, adhocItems, exclusions])
 
   // Merge needed items with persisted checked state
