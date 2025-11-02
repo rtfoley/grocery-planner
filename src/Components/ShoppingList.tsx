@@ -6,6 +6,7 @@ import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIco
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealWithDetails, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
 import { ItemAutocomplete } from './ItemAutocomplete'
+import Link from 'next/link'
 
 interface ShoppingListProps {
   recipes: RecipeWithItems[]
