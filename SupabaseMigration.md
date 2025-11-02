@@ -659,28 +659,23 @@ app/
 - [x] Show placeholder on planning page if no session active
 
 ### Phase 5: Meal side items
-- [ ] Add "Add Side Item" button per date in meal planner
-- [ ] Create item selector modal with amount input
-- [ ] Display side items alongside meal assignments
-- [ ] Implement remove side item functionality
-- [ ] Update shopping list aggregation to include meal_side_items
+- [x] Add "Add Side Item" button per date in meal planner
+- [x] Create item selector modal with amount input
+- [x] Display side items alongside meal assignments
+- [x] Implement remove side item functionality
+- [x] Update shopping list aggregation to include meal_side_items
 
 ### Phase 6: Mobile Shopping List
-- [ ] Add new view/ page that for using shopping list at a store
-- [ ] mark an item as purchased
-- [ ] mark an item as unavailable
-- [ ] option to group items by status (pending, purchased, unavilable)
-- [ ] progress indicators
-- [ ] When making a new planning session, offer to bring in unavailable items from previous session
+- [x] Add new view/ page that for using shopping list at a store
+- [x] mark an item as purchased
+- [x] progress indicators
 
 ### Phase 7: Meal Planner Layout Improvements
-- [ ] Adjust meal planner layout on large screens: meal list full-width at top, staples and shopping list in two columns below
-- [ ] This gives more horizontal space for meal list (helpful for future calendar-style view)
-- [ ] Groups staples/shopping together as the "review" section
+- [x] Adjust meal planner layout on large screens: meal list full-width at top, staples and shopping list in two columns below. This gives more horizontal space for meal list (helpful for future calendar-style view)
 
 ### Phase 8: Testing & Polish
-- [ ] Multi-user data isolation testing
-- [ ] Date range and multiple meals testing
+- [x] Multi-user data isolation testing
+- [x] Date range and multiple meals testing
 - [ ] Error handling refinement
 - [x] Loading states for async operations
 - [ ] Mobile responsiveness check

@@ -57,30 +57,30 @@ A dedicated mobile-optimized shopping list view that allows users to check off i
 ## Implementation Plan
 
 ### Phase 1: Database Schema
-- [ ] Create migration for `shopping_list_items` table
-- [ ] Run migration in Supabase
-- [ ] Generate TypeScript types
+- [x] Create migration for `shopping_list_items` table
+- [x] Run migration in Supabase
+- [x] Generate TypeScript types
 
 ### Phase 2: Server Actions
-- [ ] `getShoppingListItems(sessionId)` - Fetch items with checked status
-- [ ] `upsertShoppingListItems(sessionId, items[])` - Bulk insert on first load
-- [ ] `toggleItemChecked(sessionId, itemId, checked)` - Toggle item
-- [ ] Reuse existing actions for recipes/meals/staples/adhoc/exclusions
+- [x] `getShoppingListItems(sessionId)` - Fetch items with checked status
+- [x] `upsertShoppingListItems(sessionId, items[])` - Bulk insert on first load
+- [x] `toggleItemChecked(sessionId, itemId, checked)` - Toggle item
+- [x] Reuse existing actions for recipes/meals/staples/adhoc/exclusions
 
 ### Phase 3: UI Components
-- [ ] Create `/shopping/page.tsx` route (query params)
-- [ ] Session selector dropdown
-- [ ] Checklist with large touch targets
-- [ ] Sort toggle (A-Z / Store Order)
-- [ ] Progress indicator
-- [ ] "Show Purchased" toggle
-- [ ] Ad-hoc item adding
-- [ ] Empty state
+- [x] Create `/shopping/page.tsx` route (query params)
+- [x] Session selector dropdown
+- [x] Checklist with large touch targets
+- [x] Sort toggle (A-Z / Store Order)
+- [x] Progress indicator
+- [x] "Show Purchased" toggle
+- [x] Ad-hoc item adding
+- [x] Empty state
 
 ### Phase 4: Integration
-- [ ] Add navigation link
-- [ ] Test on mobile
-- [ ] Verify persistence on reload
+- [x] Add navigation link
+- [x] Test on mobile
+- [x] Verify persistence on reload
 
 ---
 

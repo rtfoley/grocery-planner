@@ -6,6 +6,7 @@ import { Table, Checkbox, TextInput, Button, Group, ActionIcon, Text, Stack, Car
 import { IconEdit, IconCheck, IconX, IconPlus } from '@tabler/icons-react'
 import { updateItemStapleStatus, createItem } from '@/lib/actions'
 import { useRouter } from 'next/navigation'
+import { useMediaQuery } from '@mantine/hooks'
 
 interface Item {
   id: number
@@ -24,12 +25,15 @@ export function ItemsManager({ items }: ItemsManagerProps) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editAmount, setEditAmount] = useState('')
   const [loading, setLoading] = useState<number | null>(null)
-  
+
   // New item form
   const [newItemName, setNewItemName] = useState('')
   const [newItemAmount, setNewItemAmount] = useState('')
   const [newItemIsStaple, setNewItemIsStaple] = useState(true)
   const [creatingItem, setCreatingItem] = useState(false)
+
+  // Use horizontal layout on medium+ screens, vertical on mobile
+  const isLargeScreen = useMediaQuery('(min-width: 768px)')
 
   // Filter items based on selection
   const filteredItems = useMemo(() => {
@@ -113,37 +117,69 @@ export function ItemsManager({ items }: ItemsManagerProps) {
       {/* Create New Item */}
       <Card>
         <Text fw={500} mb="md">Add New Item</Text>
-        <Group align="flex-end">
-          <TextInput
-            label="Item Name"
-            placeholder="Enter item name"
-            value={newItemName}
-            onChange={(e) => setNewItemName(e.target.value)}
-            style={{ flex: 2 }}
-          />
-          <TextInput
-            label="Default Amount (optional)"
-            placeholder="e.g. 1 gallon"
-            value={newItemAmount}
-            onChange={(e) => setNewItemAmount(e.target.value)}
-            style={{ flex: 1 }}
-            disabled={!newItemIsStaple}
-          />
-          <Checkbox
-            label = "Make Staple"
-            checked={newItemIsStaple}
-            onChange={(e) => setNewItemIsStaple(e.currentTarget.checked)}
-            mb="8"
-          />
-          <Button
-            onClick={handleCreateItem}
-            loading={creatingItem}
-            disabled={!newItemName.trim()}
-            leftSection={<IconPlus size={16} />}
-          >
-            Add
-          </Button>
-        </Group>
+        {isLargeScreen ? (
+          <Group align="flex-end">
+            <TextInput
+              label="Item Name"
+              placeholder="Enter item name"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+              style={{ flex: 2 }}
+            />
+            <TextInput
+              label="Default Amount (optional)"
+              placeholder="e.g. 1 gallon"
+              value={newItemAmount}
+              onChange={(e) => setNewItemAmount(e.target.value)}
+              style={{ flex: 1 }}
+              disabled={!newItemIsStaple}
+            />
+            <Checkbox
+              label = "Make Staple"
+              checked={newItemIsStaple}
+              onChange={(e) => setNewItemIsStaple(e.currentTarget.checked)}
+              mb="8"
+            />
+            <Button
+              onClick={handleCreateItem}
+              loading={creatingItem}
+              disabled={!newItemName.trim()}
+              leftSection={<IconPlus size={16} />}
+            >
+              Add
+            </Button>
+          </Group>
+        ) : (
+          <Stack gap="sm">
+            <TextInput
+              label="Item Name"
+              placeholder="Enter item name"
+              value={newItemName}
+              onChange={(e) => setNewItemName(e.target.value)}
+            />
+            <TextInput
+              label="Default Amount (optional)"
+              placeholder="e.g. 1 gallon"
+              value={newItemAmount}
+              onChange={(e) => setNewItemAmount(e.target.value)}
+              disabled={!newItemIsStaple}
+            />
+            <Checkbox
+              label = "Make Staple"
+              checked={newItemIsStaple}
+              onChange={(e) => setNewItemIsStaple(e.currentTarget.checked)}
+            />
+            <Button
+              onClick={handleCreateItem}
+              loading={creatingItem}
+              disabled={!newItemName.trim()}
+              leftSection={<IconPlus size={16} />}
+              fullWidth
+            >
+              Add Item
+            </Button>
+          </Stack>
+        )}
       </Card>
 
       {/* Filter Controls */}

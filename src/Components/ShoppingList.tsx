@@ -4,7 +4,6 @@
 import { useMemo, useState } from 'react'
 import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
-import Link from 'next/link'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealWithDetails, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
 import { ItemAutocomplete } from './ItemAutocomplete'
 
@@ -250,18 +249,20 @@ export function ShoppingList({
     <Card>
       <Group justify="space-between" align="center" mb="md">
         <Title order={3}>Shopping List</Title>
-        <SegmentedControl
-          size="xs"
-          value={sortMode}
-          onChange={(value) => setSortMode(value as 'store' | 'alphabetical')}
-          data={[
-            { label: 'Store Order', value: 'store' },
-            { label: 'A-Z', value: 'alphabetical' }
-          ]}
-        />
-        <Button size="compact-sm" onClick={() => shareViaShortcuts(sortedItems)}>
-          Share
-        </Button>
+        <Group gap="xs">
+          <SegmentedControl
+            size="xs"
+            value={sortMode}
+            onChange={(value) => setSortMode(value as 'store' | 'alphabetical')}
+            data={[
+              { label: 'Store Order', value: 'store' },
+              { label: 'A-Z', value: 'alphabetical' }
+            ]}
+          />
+          <Button size="compact-sm" onClick={() => shareViaShortcuts(sortedItems)}>
+            Share
+          </Button>
+        </Group>
       </Group>
       
       {/* Warning for unpositioned items (only show in store order mode) */}
@@ -338,6 +339,7 @@ export function ShoppingList({
             value={newItemName}
             onChange={(value) => setNewItemName(value)}
             size="sm"
+            items={allItems.map(item => item.name)}
           />
           <TextInput
             placeholder="Amount"

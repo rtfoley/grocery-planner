@@ -1,7 +1,7 @@
 // src/components/RecipeForm.tsx
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useForm } from '@mantine/form'
 import {
   TextInput,
@@ -28,13 +28,14 @@ interface RecipeFormProps {
     ingredients: Ingredient[]
   }
   isEdit?: boolean
-  recipeId?: number
+  recipeId?: string
 }
 
 export function RecipeForm({ initialData, isEdit = false, recipeId }: RecipeFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [itemNames, setItemNames] = useState<string[]>([])
 
   const form = useForm({
     initialValues: {
@@ -48,6 +49,20 @@ export function RecipeForm({ initialData, isEdit = false, recipeId }: RecipeForm
       }
     }
   })
+
+  // Load items once for all autocomplete components
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        const itemData = await getItems()
+        setItemNames(itemData.map(item => item.name))
+      } catch (error) {
+        console.error('Failed to load items:', error)
+      }
+    }
+
+    loadItems()
+  }, [])
 
   const addIngredient = () => {
     form.insertListItem('ingredients', { item: '', amount: '' })
@@ -120,6 +135,7 @@ export function RecipeForm({ initialData, isEdit = false, recipeId }: RecipeForm
                     label={index === 0 ? "Item" : undefined}
                     placeholder="Enter item name"
                     style={{ flex: 2 }}
+                    items={itemNames}
                     {...form.getInputProps(`ingredients.${index}.item`)}
                   />
                   <TextInput

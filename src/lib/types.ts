@@ -18,6 +18,9 @@ export type Meal = Tables['meals']['Row']
 export type MealRecipe = Tables['meal_recipes']['Row']
 export type MealItem = Tables['meal_items']['Row']
 
+// Shopping list types
+export type ShoppingListItem = Tables['shopping_list_items']['Row']
+
 // Meal composite types with relations
 export type MealWithDetails = Meal & {
   meal_recipes: Array<{
@@ -47,6 +50,10 @@ export type ItemExclusionWithItem = ItemExclusion & {
 }
 
 export type AdhocItemWithItem = AdhocItem & {
+  item: Item
+}
+
+export type ShoppingListItemWithItem = ShoppingListItem & {
   item: Item
 }
 

@@ -804,3 +804,113 @@ export async function removeMealItem(mealItemId: string) {
 
   return { success: !error }
 }
+
+// ============================================================================
+// SHOPPING LIST ACTIONS
+// ============================================================================
+
+// Get shopping list items for a session (with item details)
+export async function getShoppingListItems(planningSessionId: string) {
+  const supabase = await createClient()
+
+  const { data } = await supabase
+    .from('shopping_list_items')
+    .select(`
+      *,
+      item:items (*)
+    `)
+    .eq('planning_session_id', planningSessionId)
+    .order('checked', { ascending: true })
+
+  return data || []
+}
+
+
+// Add item to shopping list by name (creates item if needed)
+export async function addShoppingListItemByName(planningSessionId: string, itemName: string) {
+  const groupId = await getUserGroupId()
+  if (!groupId) return null
+
+  const supabase = await createClient()
+  const normalizedName = itemName.toLowerCase().trim()
+
+  // Try to get existing item
+  let { data: item } = await supabase
+    .from('items')
+    .select('id')
+    .eq('name', normalizedName)
+    .eq('shopping_group_id', groupId)
+    .single()
+
+  // Create item if it doesn't exist
+  if (!item) {
+    const { data: newItem } = await supabase
+      .from('items')
+      .insert({
+        name: normalizedName,
+        shopping_group_id: groupId
+      })
+      .select('id')
+      .single()
+
+    item = newItem
+  }
+
+  if (!item) return null
+
+  // Add to shopping list
+  const { data, error } = await supabase
+    .from('shopping_list_items')
+    .insert({
+      planning_session_id: planningSessionId,
+      item_id: item.id,
+      checked: false
+    })
+    .select(`
+      *,
+      item:items (*)
+    `)
+    .single()
+
+  if (error) {
+    console.error('Add shopping list item error:', error)
+    return null
+  }
+
+  // Don't revalidate - client component handles optimistic updates
+  return data
+}
+
+// Toggle a single item's checked status (upsert so it creates if doesn't exist)
+export async function toggleShoppingListItem(
+  planningSessionId: string,
+  itemId: string,
+  checked: boolean
+) {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('shopping_list_items')
+    .upsert({
+      planning_session_id: planningSessionId,
+      item_id: itemId,
+      checked: checked,
+      updated_at: new Date().toISOString()
+    }, {
+      onConflict: 'planning_session_id,item_id'
+    })
+    .select(`
+      *,
+      item:items (*)
+    `)
+    .single()
+
+  if (error) {
+    console.error('Toggle shopping list item error:', error)
+    return null
+  }
+
+  // Don't revalidate - client component handles optimistic updates
+  return data
+}
+

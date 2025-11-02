@@ -4,7 +4,8 @@
 import { useEffect, useState } from 'react'
 import { Title, Group, Button, Grid, Text, Stack, Modal, Loader, Center, Paper, Select } from '@mantine/core'
 import { DatePickerInput } from '@mantine/dates'
-import { IconCalendar } from '@tabler/icons-react'
+import { IconCalendar, IconShoppingCart } from '@tabler/icons-react'
+import Link from 'next/link'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealWithDetails, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatus, StapleStatusEnum } from '@/lib/types'
 import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
@@ -368,6 +369,16 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
               style={{ width: 200 }}
               disabled={isLoading}
             />
+          )}
+          {planningSessionId && (
+            <Button
+              component={Link}
+              href={`/shopping?session=${planningSessionId}`}
+              leftSection={<IconShoppingCart size={16} />}
+              disabled={isLoading}
+            >
+              Go Shopping
+            </Button>
           )}
           <Button variant="light" onClick={openModal} disabled={isLoading}>
             New Session

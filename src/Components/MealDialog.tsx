@@ -232,6 +232,7 @@ export function MealDialog({
               onChange={setNewItemName}
               style={{ flex: 2 }}
               size="sm"
+              items={allItems.map(item => item.name)}
             />
             <TextInput
               placeholder="Amount"

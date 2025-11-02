@@ -13,21 +13,29 @@ interface ItemAutocompleteProps {
   style?: React.CSSProperties
   error?: string
   size?: string
+  items?: string[] // Optional: pass in pre-loaded items to avoid multiple fetches
 }
 
-export function ItemAutocomplete({ 
-  value, 
-  onChange, 
-  label, 
+export function ItemAutocomplete({
+  value,
+  onChange,
+  label,
   placeholder,
   style,
   error,
-  size
+  size,
+  items: itemsProp
 }: ItemAutocompleteProps) {
-  const [items, setItems] = useState<string[]>([])
+  const [items, setItems] = useState<string[]>(itemsProp || [])
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    // Only load items if not provided via props
+    if (itemsProp) {
+      setItems(itemsProp)
+      return
+    }
+
     const loadItems = async () => {
       setLoading(true)
       try {
@@ -40,7 +48,7 @@ export function ItemAutocomplete({
     }
 
     loadItems()
-  }, [])
+  }, [itemsProp])
 
   return (
     <Autocomplete
