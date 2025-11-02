@@ -116,6 +116,17 @@ CREATE TABLE item_exclusions (
   PRIMARY KEY (planning_session_id, item_id)
 );
 
+-- Shopping List Items (tracks checked/unchecked status during shopping)
+CREATE TABLE shopping_list_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  planning_session_id UUID NOT NULL REFERENCES planning_sessions(id) ON DELETE CASCADE,
+  item_id UUID NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+  checked BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(planning_session_id, item_id)
+);
+
 -- ============================================================================
 -- INDEXES FOR PERFORMANCE
 -- ============================================================================
@@ -136,6 +147,8 @@ CREATE INDEX idx_meal_items_item ON meal_items(item_id);
 CREATE INDEX idx_staple_selections_session ON staple_selections(planning_session_id);
 CREATE INDEX idx_adhoc_items_session ON adhoc_items(planning_session_id);
 CREATE INDEX idx_item_exclusions_session ON item_exclusions(planning_session_id);
+CREATE INDEX idx_shopping_list_items_session ON shopping_list_items(planning_session_id);
+CREATE INDEX idx_shopping_list_items_checked ON shopping_list_items(planning_session_id, checked);
 
 -- ============================================================================
 -- HELPER FUNCTION: Initialize new user with default shopping group
@@ -145,15 +158,19 @@ CREATE OR REPLACE FUNCTION public.initialize_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
   new_group_id UUID;
+  group_name TEXT;
 BEGIN
+  -- Use user's email in the group name: "email@example.com's shopping group"
+  group_name := COALESCE(NEW.email || '''s shopping group', 'My Shopping Group');
+
   -- Explicitly use public schema
   INSERT INTO public.shopping_groups (name)
-  VALUES ('My Shopping Group')
+  VALUES (group_name)
   RETURNING id INTO new_group_id;
-  
+
   INSERT INTO public.shopping_group_members (shopping_group_id, user_id, role)
   VALUES (new_group_id, NEW.id, 'owner');
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
@@ -210,6 +227,7 @@ ALTER TABLE meal_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE staple_selections ENABLE ROW LEVEL SECURITY;
 ALTER TABLE adhoc_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE item_exclusions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shopping_list_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shopping_item_status ENABLE ROW LEVEL SECURITY;
 
 -- ============================================================================
@@ -836,6 +854,71 @@ WITH CHECK (
 
 CREATE POLICY "Group members can delete item exclusions"
 ON item_exclusions FOR DELETE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+-- ============================================================================
+-- SHOPPING LIST ITEMS POLICIES
+-- ============================================================================
+
+CREATE POLICY "Group members can view shopping list items"
+ON shopping_list_items FOR SELECT
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can create shopping list items"
+ON shopping_list_items FOR INSERT
+TO authenticated
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can update shopping list items"
+ON shopping_list_items FOR UPDATE
+TO authenticated
+USING (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+)
+WITH CHECK (
+  planning_session_id IN (
+    SELECT id FROM planning_sessions
+    WHERE shopping_group_id IN (
+      SELECT shopping_group_id FROM shopping_group_members
+      WHERE user_id = (SELECT auth.uid())
+    )
+  )
+);
+
+CREATE POLICY "Group members can delete shopping list items"
+ON shopping_list_items FOR DELETE
 TO authenticated
 USING (
   planning_session_id IN (

@@ -7,10 +7,9 @@ import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { deleteRecipe } from '@/lib/actions'
-import { useRouter } from 'next/navigation'
 
 interface Recipe {
-  id: number
+  id: string
   name: string
   recipe_items: Array<{
     item: { name: string }
@@ -22,8 +21,9 @@ interface RecipesListProps {
   recipes: Recipe[]
 }
 
-export function RecipesList({ recipes }: RecipesListProps) {
-  const router = useRouter()
+export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
+  // Local state for optimistic updates
+  const [recipes, setRecipes] = useState<Recipe[]>(initialRecipes)
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [recipeToDelete, setRecipeToDelete] = useState<Recipe | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -35,16 +35,22 @@ export function RecipesList({ recipes }: RecipesListProps) {
 
   const handleDeleteConfirm = async () => {
     if (!recipeToDelete) return
-    
+
     setDeleting(true)
-    const result = await deleteRecipe(recipeToDelete.id)
-    
-    if (result.success) {
-      setDeleteModalOpen(false)
-      setRecipeToDelete(null)
-      router.refresh()
+
+    // Optimistic update - remove recipe from list immediately
+    setRecipes(prev => prev.filter(r => r.id !== recipeToDelete.id))
+    setDeleteModalOpen(false)
+    const deletedRecipe = recipeToDelete
+    setRecipeToDelete(null)
+
+    const result = await deleteRecipe(deletedRecipe.id)
+
+    // If deletion failed, add the recipe back
+    if (!result.success) {
+      setRecipes(prev => [...prev, deletedRecipe])
     }
-    
+
     setDeleting(false)
   }
 

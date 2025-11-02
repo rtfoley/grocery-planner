@@ -5,11 +5,10 @@ import { useState, useMemo } from 'react'
 import { Table, Checkbox, TextInput, Button, Group, ActionIcon, Text, Stack, Card, SegmentedControl } from '@mantine/core'
 import { IconEdit, IconCheck, IconX, IconPlus } from '@tabler/icons-react'
 import { updateItemStapleStatus, createItem } from '@/lib/actions'
-import { useRouter } from 'next/navigation'
 import { useMediaQuery } from '@mantine/hooks'
 
 interface Item {
-  id: number
+  id: string
   name: string
   is_staple: boolean
   staple_amount: string | null
@@ -19,12 +18,13 @@ interface ItemsManagerProps {
   items: Item[]
 }
 
-export function ItemsManager({ items }: ItemsManagerProps) {
-  const router = useRouter()
+export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
+  // Local state for optimistic updates
+  const [items, setItems] = useState<Item[]>(initialItems)
   const [filter, setFilter] = useState<string>('all')
-  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [editAmount, setEditAmount] = useState('')
-  const [loading, setLoading] = useState<number | null>(null)
+  const [loading, setLoading] = useState<string | null>(null)
 
   // New item form
   const [newItemName, setNewItemName] = useState('')
@@ -47,17 +47,28 @@ export function ItemsManager({ items }: ItemsManagerProps) {
 
   const handleStapleToggle = async (item: Item) => {
     setLoading(item.id)
-    
+
+    // Optimistic update
+    const newIsStaple = !item.is_staple
+    setItems(prev => prev.map(i =>
+      i.id === item.id
+        ? { ...i, is_staple: newIsStaple }
+        : i
+    ))
+
     const result = await updateItemStapleStatus(
-      item.id, 
-      !item.is_staple, 
-      !item.is_staple ? item.staple_amount || undefined : undefined
+      item.id,
+      newIsStaple,
+      newIsStaple ? item.staple_amount || undefined : undefined
     )
-    
-    if (result.success) {
-      router.refresh()
+
+    // Update with server response if available
+    if (result.success && result.item) {
+      setItems(prev => prev.map(i =>
+        i.id === item.id ? result.item : i
+      ))
     }
-    
+
     setLoading(null)
   }
 
@@ -68,19 +79,30 @@ export function ItemsManager({ items }: ItemsManagerProps) {
 
   const handleSaveAmount = async (item: Item) => {
     setLoading(item.id)
-    
+
+    // Optimistic update
+    const newAmount = editAmount.trim() || null
+    setItems(prev => prev.map(i =>
+      i.id === item.id
+        ? { ...i, staple_amount: newAmount }
+        : i
+    ))
+
     const result = await updateItemStapleStatus(
       item.id,
       true,
-      editAmount.trim() || undefined
+      newAmount || undefined
     )
-    
-    if (result.success) {
-      setEditingId(null)
-      setEditAmount('')
-      router.refresh()
+
+    // Update with server response if available
+    if (result.success && result.item) {
+      setItems(prev => prev.map(i =>
+        i.id === item.id ? result.item : i
+      ))
     }
-    
+
+    setEditingId(null)
+    setEditAmount('')
     setLoading(null)
   }
 
@@ -91,22 +113,23 @@ export function ItemsManager({ items }: ItemsManagerProps) {
 
   const handleCreateItem = async () => {
     if (!newItemName.trim()) return
-    
+
     setCreatingItem(true)
-    
+
     const result = await createItem(
       newItemName.trim(),
       newItemIsStaple,
       newItemIsStaple ? newItemAmount.trim() || undefined : undefined
     )
-    
-    if (result.success) {
+
+    if (result.success && result.item) {
+      // Add new item to the list
+      setItems(prev => [...prev, result.item])
       setNewItemName('')
       setNewItemAmount('')
       setNewItemIsStaple(true)
-      router.refresh()
     }
-    
+
     setCreatingItem(false)
   }
 

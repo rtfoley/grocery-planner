@@ -30,7 +30,6 @@ import {
 } from '@mantine/core'
 import { IconGripVertical, IconAlertCircle, IconTrash } from '@tabler/icons-react'
 import { updateMultipleItemOrders } from '@/lib/actions'
-import { useRouter } from 'next/navigation'
 
 interface Item {
   id: string
@@ -39,7 +38,6 @@ interface Item {
 }
 
 export function StoreOrderManager({ items }: { items: Item[] }) {
-  const router = useRouter()
   const [saving, setSaving] = useState(false)
 
   // initial split
@@ -118,8 +116,8 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
       ...orderedItems.map((it, i) => ({ id: it.id, orderIndex: i + 1 })),
       ...unorderedItems.map(it => ({ id: it.id, orderIndex: null as any })),
     ]
-    const result = await updateMultipleItemOrders(updates)
-    if (result.success) router.refresh()
+    await updateMultipleItemOrders(updates)
+    // State is already updated optimistically via local drag-and-drop operations
     setSaving(false)
   }
 
