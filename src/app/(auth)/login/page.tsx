@@ -1,8 +1,8 @@
 // src/app/(auth)/login/page.tsx
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import {
   TextInput,
@@ -11,18 +11,27 @@ import {
   Paper,
   Title,
   Container,
-  Text,
-  Anchor,
   Stack
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
-import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    const error = searchParams.get('error')
+    if (error === 'verification_failed') {
+      notifications.show({
+        title: 'Verification Failed',
+        message: 'The invitation link is invalid or has expired. Please request a new invitation.',
+        color: 'red',
+      })
+    }
+  }, [searchParams])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,12 +65,6 @@ export default function LoginPage() {
   return (
     <Container size={420} my={40}>
       <Title ta="center">Welcome back</Title>
-      <Text c="dimmed" size="sm" ta="center" mt={5}>
-        Don&apos;t have an account?{' '}
-        <Anchor size="sm" component={Link} href="/signup">
-          Sign up
-        </Anchor>
-      </Text>
 
       <Paper withBorder shadow="md" p={30} mt={30} radius="md">
         <form onSubmit={handleLogin}>
