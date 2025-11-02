@@ -50,7 +50,7 @@
 - [ ] Progress indicators showing planning completion (X/14 days planned)
 - [ ] Item counts badges on navigation tabs
 - [ ] Visual recipe previews (ingredient count, quick view)
-- [ ] Calendar view alternative for meal planning
+- [x] Calendar view alternative for meal planning
 
 ## ✨ **Polish Details**
 

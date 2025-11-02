@@ -68,30 +68,30 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] In-memory meal planning interface (14 days)
 - [x] Shopping list generation with ingredient counts
 
-### Slice 1.5: Item Exclusions
+### Slice 1.5: Item Exclusions ✅ COMPLETE
 - [x] In-memory item exclusions ("we have flour at home")
 - [x] Shopping list checkboxes to exclude items
 - [x] Excluded items UI treatment
 
-### Slice 2: Ad-hoc Items
+### Slice 2: Ad-hoc Items ✅ COMPLETE
 - [x] In-memory ad-hoc item additions to shopping list
 - [x] Unified shopping list display (recipes + ad-hoc items)
 
-### Slice 3: Staples System
+### Slice 3: Staples System ✅ COMPLETE
 - [x] Add staple fields to Item table
 - [x] StapleSelection table and management
 - [x] Master staples list interface (`/staples`)
 - [x] In-memory staples selection for shopping lists
 - [x] Three-state staples workflow (pending/included/excluded)
 
-### Slice 4: Store Ordering
+### Slice 4: Store Ordering ✅ COMPLETE
 - [x] Add store_order_index to Item table
 - [x] Store ordering interface (`/store-order`)
 - [x] Drag-and-drop item reordering
 - [x] Shopping list display in custom store order
 - [x] Warning for unpositioned items
 
-### Slice 5: Full Persistence
+### Slice 5: Full Persistence ✅ COMPLETE
 - [x] Add PlanningSession, MealAssignment, AdHocItem tables
 - [x] Convert all in-memory state to persistent storage
 - [x] handle duplicate items across recipes and staples within a shopping list
@@ -115,14 +115,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Mobile shopping list view with progress tracking
 - [x] Group names use user email
 
-### Slice 8: Invitation System & Polish 🚧 IN PROGRESS
-- [ ] **Invitations (High Priority)**
-  - [ ] Create `/settings/groups` page for group management
-  - [ ] Build invitation UI (owners can invite via email)
-  - [ ] Pending invitations banner with accept/decline
-  - [ ] Member list with remove functionality (owners only)
-  - [ ] Test complete invitation flow end-to-end
-
+### Slice 8: Polish 🚧 IN PROGRESS
 - [ ] **Production Testing & Polish**
   - [ ] Test all major features on Vercel production URL
   - [ ] Error handling refinement across all components
@@ -131,11 +124,34 @@ Streamlines the process of planning meals and generating grocery lists by:
 
 - [ ] **UI/UX Quick Wins**
   - [ ] Toast notifications for user actions (recipe saved, item added, etc.)
+  - [ ] Loading spinners for async operations
   - [ ] Enhanced empty states with helpful CTAs
   - [ ] Visual spacing improvements (card elevation, section dividers)
   - [ ] Icon and color consistency across app
+  - [ ] Drag handles for better affordance in store ordering
+  - [ ] Confirmation tooltips for destructive actions
+  _ [ ] **Improved Typography & Color**
+    - [ ] Semantic color usage - success green, warning orange, error red
+    - [ ] Text hierarchy with better size/weight combinations
+    - [ ] Readable text contrast especially for dimmed text
+    - [ ] Consistent button styles across all components
+
+- [ ] **Mobile improvements**
+  - [ ] Better touch targets
+  - [ ] Fixed action buttons for critical actions (Add Recipe, Start Session)
+
+- [ ] Unit tests
+
+### Slice X: Invitations
+- [ ] Create `/settings/groups` page for group management
+- [ ] Build invitation UI (owners can invite via email)
+- [ ] Pending invitations banner with accept/decline
+- [ ] Member list with remove functionality (owners only)
+- [ ] Test complete invitation flow end-to-end
+
 
 ### Future Enhancements
+
 
 - [ ] **Phase 1 UX Improvements**
   - [ ] Mobile interaction improvements (swipe actions, better touch targets)
@@ -145,12 +161,12 @@ Streamlines the process of planning meals and generating grocery lists by:
 
 - [ ] **Phase 2 Advanced Features**
   - [ ] Keyboard shortcuts for power users
-  - [ ] Calendar view for meal planning
   - [ ] Item count badges on navigation
   - [ ] Undo/redo for accidental deletions
-  - [ ] **Multiple store orders** - Support different layouts for different store locations (e.g., different Wegmans locations)
+  
 
 - [ ] **Post-MVP Ideas**
+  - [ ] Support different layouts for different store locations (e.g., different Wegmans locations)
   - [ ] Recipe import/export
   - [ ] Nutritional information tracking
   - [ ] Shopping history analysis
@@ -224,3 +240,23 @@ See `supabase.sql` for the complete data model. Key relationships:
 - **Progressive enhancement:** Build complexity incrementally
 - **Mobile-first:** Optimized for in-store shopping on phones
 - **Collaborative:** Multiple family members can share and manage together
+
+---
+
+## Disclaimer
+
+THIS SOFTWARE IS PROVIDED &quot;AS IS&quot; WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT.
+
+USE THIS SOFTWARE AT YOUR OWN RISK. The authors and contributors shall not be liable for any claim, damages, or other liability arising from the use of this software.
+
+This application handles user data including recipes, meal plans, and shopping information. Users are responsible for:
+- Securing their own Supabase and Vercel accounts
+- Protecting their environment variables and API keys
+- Understanding the data privacy implications of cloud hosting
+- Compliance with any applicable data protection regulations
+
+## Copyright
+
+Copyright &copy; 2025. All rights reserved.
+
+This project is made available for personal and educational use. If you use this code or deploy your own instance, please provide attribution to the original project.

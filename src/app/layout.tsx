@@ -5,6 +5,7 @@ import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
 import '@mantine/notifications/styles.css'
 import { Navigation } from '@/Components/Navigation'
+import { Footer } from '@/Components/Footer'
 import { Providers } from '@/Components/Providers'
 
 export const metadata: Metadata = {
@@ -26,6 +27,7 @@ export default function RootLayout({
         <Providers>
           <Navigation />
           {children}
+          <Footer />
         </Providers>
       </body>
     </html>
