@@ -244,10 +244,14 @@ export async function updateRecipe(id: string, name: string, ingredients: Array<
       .eq('recipe_id', id)
 
     const existingMap = new Map(
-      (existingItems || []).map(ri => [
-        (ri.item as { name: string } | null)?.name || '',
-        { item_id: ri.item_id, amount: ri.amount }
-      ])
+      (existingItems || []).map(ri => {
+        const itemData = ri.item as { name: string } | { name: string }[] | null
+        const itemName = Array.isArray(itemData) ? itemData[0]?.name : itemData?.name
+        return [
+          itemName || '',
+          { item_id: ri.item_id, amount: ri.amount }
+        ]
+      })
     )
 
     // Process new ingredients

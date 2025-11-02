@@ -18,7 +18,7 @@ export default async function EditRecipePage({ params }: PageProps) {
 
   const initialData = {
     name: recipe.name,
-    ingredients: recipe.recipe_items.map(item => ({
+    ingredients: recipe.recipe_items.map((item: { item: { name: string }, amount: string | null }) => ({
       item: item.item.name,
       amount: item.amount || ''
     }))

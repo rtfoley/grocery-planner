@@ -74,8 +74,8 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
     const { active, over } = event
     if (!over || active.id === over.id) return
 
-    const oldIndex = indexOfById(orderedItems, active.id)
-    const newIndex = indexOfById(orderedItems, over.id)
+    const oldIndex = indexOfById(orderedItems, String(active.id))
+    const newIndex = indexOfById(orderedItems, String(over.id))
 
     // if active or over is not in orderedItems, ignore (prevents cross-list moves)
     if (oldIndex === -1 || newIndex === -1) return
