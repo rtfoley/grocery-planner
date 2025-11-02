@@ -1,8 +1,7 @@
 // src/app/auth/confirm/route.ts
 import { type EmailOtpType } from '@supabase/supabase-js'
-import { type NextRequest } from 'next/server'
+import { type NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
@@ -12,17 +11,22 @@ export async function GET(request: NextRequest) {
 
   if (token_hash && type) {
     const supabase = await createClient()
-    const { error } = await supabase.auth.verifyOtp({
+    const { data, error } = await supabase.auth.verifyOtp({
       type,
       token_hash,
     })
 
-    if (!error) {
-      // Successfully verified - redirect to home or specified page
-      redirect(next)
+    if (!error && data.user) {
+      // For invite type, redirect to password setup
+      if (type === 'invite') {
+        return NextResponse.redirect(new URL('/auth/set-password', request.url))
+      }
+
+      // For other types (like email confirmation), redirect to home
+      return NextResponse.redirect(new URL(next, request.url))
     }
   }
 
   // Failed to verify - redirect to login with error
-  redirect('/login?error=verification_failed')
+  return NextResponse.redirect(new URL('/login?error=verification_failed', request.url))
 }
