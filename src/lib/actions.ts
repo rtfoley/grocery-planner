@@ -118,7 +118,7 @@ export async function updateItemOrder(itemId: string, orderIndex: number) {
   }
 }
 
-export async function updateMultipleItemOrders(updates: Array<{ id: string, orderIndex: number }>) {
+export async function updateMultipleItemOrders(updates: Array<{ id: string, orderIndex: number | null }>) {
   const groupId = await getUserGroupId()
   if (!groupId) return { success: false, error: 'Not authenticated' }
 

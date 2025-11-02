@@ -22,8 +22,7 @@ import {
   MealWithDetails,
   StapleSelectionWithItem,
   ItemExclusionWithItem,
-  AdhocItemWithItem,
-  Item
+  AdhocItemWithItem
 } from '@/lib/types'
 import {
   getShoppingListItems,

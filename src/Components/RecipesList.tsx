@@ -121,7 +121,7 @@ export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
         centered
       >
         <Text mb="md">
-          Are you sure you want to delete "{recipeToDelete?.name}"? This action cannot be undone.
+          Are you sure you want to delete &quot;{recipeToDelete?.name}&quot;? This action cannot be undone.
         </Text>
         <Group justify="flex-end">
           <Button variant="subtle" onClick={handleDeleteCancel} disabled={deleting}>

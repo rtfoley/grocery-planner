@@ -25,7 +25,6 @@ import {
   ActionIcon,
   Alert,
   Button,
-  Divider,
   Grid,
 } from '@mantine/core'
 import { IconGripVertical, IconAlertCircle, IconTrash } from '@tabler/icons-react'
@@ -114,7 +113,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
     setSaving(true)
     const updates = [
       ...orderedItems.map((it, i) => ({ id: it.id, orderIndex: i + 1 })),
-      ...unorderedItems.map(it => ({ id: it.id, orderIndex: null as any })),
+      ...unorderedItems.map(it => ({ id: it.id, orderIndex: null })),
     ]
     await updateMultipleItemOrders(updates)
     // State is already updated optimistically via local drag-and-drop operations
