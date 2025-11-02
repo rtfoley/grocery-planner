@@ -38,7 +38,8 @@ export async function middleware(request: NextRequest) {
     !user &&
     !request.nextUrl.pathname.startsWith('/login') &&
     !request.nextUrl.pathname.startsWith('/signup') &&
-    !request.nextUrl.pathname.startsWith('/auth/confirm')
+    !request.nextUrl.pathname.startsWith('/auth/confirm') &&
+    !request.nextUrl.pathname.startsWith('/auth/forgot-password')
   ) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'

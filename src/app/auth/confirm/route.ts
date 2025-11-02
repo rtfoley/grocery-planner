@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
     })
 
     if (!error && data.user) {
-      // For invite type, redirect to password setup
-      if (type === 'invite') {
+      // For invite or recovery (password reset) types, redirect to password setup
+      if (type === 'invite' || type === 'recovery') {
         return NextResponse.redirect(new URL('/auth/set-password', request.url))
       }
 

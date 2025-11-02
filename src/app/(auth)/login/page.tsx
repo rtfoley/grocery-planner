@@ -11,9 +11,12 @@ import {
   Paper,
   Title,
   Container,
-  Stack
+  Stack,
+  Text,
+  Anchor
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import Link from 'next/link'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -84,6 +87,12 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
+
+            <Text size="sm" ta="right">
+              <Anchor component={Link} href="/auth/forgot-password">
+                Forgot password?
+              </Anchor>
+            </Text>
 
             <Button type="submit" fullWidth loading={loading}>
               Sign in
