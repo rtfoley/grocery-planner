@@ -120,9 +120,8 @@ Streamlines the process of planning meals and generating grocery lists by:
   - [x] Disable public signups for now
   - [x] Facilitate Supabase invites
   - [x] Facilitate password resets
-  - [ ] Test all major features on Vercel production URL
+  - [x] Test all major features on Vercel production URL
   - [ ] Error handling refinement across all components
-  - [ ] Mobile responsiveness check (all pages)
   - [ ] Performance testing (query optimization)
   - [ ] Add captcha?
 
