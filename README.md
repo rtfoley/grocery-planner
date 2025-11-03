@@ -121,31 +121,31 @@ Streamlines the process of planning meals and generating grocery lists by:
   - [x] Facilitate Supabase invites
   - [x] Facilitate password resets
   - [x] Test all major features on Vercel production URL
-  - [ ] Error handling refinement across all components
-  - [x] Performance testing (query optimization)
-  - [ ] Add captcha?
+  - [x] Performance testing (query optimization) 
 
 - [ ] **UI/UX Quick Wins**
   - [ ] Toast notifications for user actions (recipe saved, item added, etc.)
   - [ ] Loading spinners for async operations
-  - [ ] Enhanced empty states with helpful CTAs
-  - [ ] Visual spacing improvements (card elevation, section dividers)
-  - [ ] Icon and color consistency across app
   - [ ] Drag handles for better affordance in store ordering
   - [ ] Confirmation tooltips for destructive actions
-  _ [ ] **Improved Typography & Color**
-    - [ ] Semantic color usage - success green, warning orange, error red
-    - [ ] Text hierarchy with better size/weight combinations
-    - [ ] Readable text contrast especially for dimmed text
-    - [ ] Consistent button styles across all components
-
-- [ ] **Mobile improvements**
-  - [ ] Better touch targets
+  - [ ] Visual spacing improvements (card elevation, section dividers)
+  - [ ] Icon and color consistency across app
+  - [ ] Semantic color usage - success green, warning orange, error red
+  - [ ] Text hierarchy with better size/weight combinations
+  - [ ] Consistent button styles across all components
+  - [ ] Better touch targets for mobile
   - [ ] Fixed action buttons for critical actions (Add Recipe, Start Session)
 
+### Slice 9: Prepping for more users and contributors
 - [ ] Unit tests
+- [ ] Enhanced empty states with helpful CTAs
+- [ ] Readable text contrast especially for dimmed text
+- [ ] Error handling refinement across all components
+    - [ ] standardize return types
+- [ ] Add captcha?
 
-### Slice X: Invitations
+
+### Slice 10: Invitations
 - [ ] Create `/settings/groups` page for group management
 - [ ] Build invitation UI (owners can invite via email)
 - [ ] Pending invitations banner with accept/decline
@@ -154,7 +154,6 @@ Streamlines the process of planning meals and generating grocery lists by:
 
 
 ### Future Enhancements
-
 
 - [ ] **Phase 1 UX Improvements**
   - [ ] Mobile interaction improvements (swipe actions, better touch targets)
