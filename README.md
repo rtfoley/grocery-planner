@@ -118,8 +118,8 @@ Streamlines the process of planning meals and generating grocery lists by:
 ### Slice 8: Polish 🚧 IN PROGRESS
 - [ ] **Production Testing & Polish**
   - [x] Disable public signups for now
-  - [ ] Facilitate Supabase invites
-  - [ ] Facilitate password resets
+  - [x] Facilitate Supabase invites
+  - [x] Facilitate password resets
   - [ ] Test all major features on Vercel production URL
   - [ ] Error handling refinement across all components
   - [ ] Mobile responsiveness check (all pages)
