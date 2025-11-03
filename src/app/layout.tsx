@@ -7,6 +7,7 @@ import '@mantine/notifications/styles.css'
 import { Navigation } from '@/Components/Navigation'
 import { Footer } from '@/Components/Footer'
 import { Providers } from '@/Components/Providers'
+import { ErrorBoundary } from '@/Components/ErrorBoundary'
 
 export const metadata: Metadata = {
   title: 'Grocery Planner',
@@ -25,9 +26,11 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
-          <Navigation />
-          {children}
-          <Footer />
+          <ErrorBoundary>
+            <Navigation />
+            {children}
+            <Footer />
+          </ErrorBoundary>
         </Providers>
       </body>
     </html>

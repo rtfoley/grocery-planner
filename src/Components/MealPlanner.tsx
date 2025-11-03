@@ -102,14 +102,18 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       const start = new Date(dateRange[0]);
       const end = new Date(dateRange[1]);
 
-      const planningSession = await createPlanningSession(
+      const result = await createPlanningSession(
         start.toISOString().split('T')[0],
         end.toISOString().split('T')[0]
       );
-      if (!planningSession) return;
 
-      setPlanningSessionId(planningSession.id);
-      setCurrentSession(planningSession);
+      if (!result.success || !result.session) {
+        console.error('Failed to create planning session:', result.error);
+        return;
+      }
+
+      setPlanningSessionId(result.session.id);
+      setCurrentSession(result.session);
 
       // No pre-created meals - user adds them as needed
       setMeals([]);
@@ -118,7 +122,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       const tempStapleSelections: StapleSelectionWithItem[] = [];
       for (const item of allItems) {
         if (item.is_staple) {
-          const stapleSelection = await createStapleSelection(planningSession.id, item.id, StapleStatusEnum.PENDING);
+          const stapleSelection = await createStapleSelection(result.session.id, item.id, StapleStatusEnum.PENDING);
           if (stapleSelection) {
             tempStapleSelections.push(stapleSelection);
           }

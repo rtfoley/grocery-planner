@@ -122,7 +122,7 @@ Streamlines the process of planning meals and generating grocery lists by:
   - [x] Facilitate password resets
   - [x] Test all major features on Vercel production URL
   - [ ] Error handling refinement across all components
-  - [ ] Performance testing (query optimization)
+  - [x] Performance testing (query optimization)
   - [ ] Add captcha?
 
 - [ ] **UI/UX Quick Wins**

@@ -162,43 +162,56 @@ export async function createRecipe(name: string, ingredients: Array<{ item: stri
 
     if (recipeError) throw recipeError
 
-    // Create or get items and create recipe_items
-    for (const ing of ingredients) {
-      const normalizedName = ing.item.toLowerCase().trim()
+    // Normalize all ingredient names
+    const normalizedIngredients = ingredients.map(ing => ({
+      name: ing.item.toLowerCase().trim(),
+      amount: ing.amount || null
+    }))
 
-      // Try to get existing item
-      let { data: item } = await supabase
+    const itemNames = normalizedIngredients.map(ing => ing.name)
+
+    // Batch fetch all existing items in one query
+    const { data: existingItems } = await supabase
+      .from('items')
+      .select('id, name')
+      .eq('shopping_group_id', groupId)
+      .in('name', itemNames)
+
+    const existingItemMap = new Map(
+      (existingItems || []).map(item => [item.name, item.id])
+    )
+
+    // Identify which items need to be created
+    const itemsToCreate = normalizedIngredients
+      .filter(ing => !existingItemMap.has(ing.name))
+      .map(ing => ({
+        name: ing.name,
+        shopping_group_id: groupId
+      }))
+
+    // Batch create new items if any
+    if (itemsToCreate.length > 0) {
+      const { data: newItems } = await supabase
         .from('items')
-        .select('id')
-        .eq('name', normalizedName)
-        .eq('shopping_group_id', groupId)
-        .single()
+        .insert(itemsToCreate)
+        .select('id, name')
 
-      // Create item if it doesn't exist
-      if (!item) {
-        const { data: newItem } = await supabase
-          .from('items')
-          .insert({
-            name: normalizedName,
-            shopping_group_id: groupId
-          })
-          .select('id')
-          .single()
-
-        item = newItem
-      }
-
-      if (item) {
-        // Create recipe_item
-        await supabase
-          .from('recipe_items')
-          .insert({
-            recipe_id: recipe.id,
-            item_id: item.id,
-            amount: ing.amount || null
-          })
-      }
+      // Add newly created items to the map
+      newItems?.forEach(item => {
+        existingItemMap.set(item.name, item.id)
+      })
     }
+
+    // Batch create all recipe_items
+    const recipeItemsToCreate = normalizedIngredients.map(ing => ({
+      recipe_id: recipe.id,
+      item_id: existingItemMap.get(ing.name)!,
+      amount: ing.amount
+    }))
+
+    await supabase
+      .from('recipe_items')
+      .insert(recipeItemsToCreate)
 
     // Fetch the complete recipe with items
     const { data: completeRecipe } = await supabase
@@ -254,51 +267,81 @@ export async function updateRecipe(id: string, name: string, ingredients: Array<
       })
     )
 
-    // Process new ingredients
-    const newItemNames = new Set<string>()
-    for (const ing of ingredients) {
-      const normalizedName = ing.item.toLowerCase().trim()
-      newItemNames.add(normalizedName)
+    // Normalize all ingredient names
+    const normalizedIngredients = ingredients.map(ing => ({
+      name: ing.item.toLowerCase().trim(),
+      amount: ing.amount || null
+    }))
 
-      const existing = existingMap.get(normalizedName)
+    const newItemNames = new Set(normalizedIngredients.map(ing => ing.name))
 
-      if (existing) {
-        // Item exists - check if amount changed
-        if (existing.amount !== (ing.amount || null)) {
-          await supabase
+    // Separate ingredients into: existing (to update), new (to add)
+    const toUpdate = normalizedIngredients.filter(ing => {
+      const existing = existingMap.get(ing.name)
+      return existing && existing.amount !== ing.amount
+    })
+
+    const toAdd = normalizedIngredients.filter(ing => !existingMap.has(ing.name))
+
+    // Batch update amounts for existing items that changed
+    if (toUpdate.length > 0) {
+      await Promise.all(
+        toUpdate.map(ing => {
+          const existing = existingMap.get(ing.name)!
+          return supabase
             .from('recipe_items')
-            .update({ amount: ing.amount || null })
+            .update({ amount: ing.amount })
             .eq('recipe_id', id)
             .eq('item_id', existing.item_id)
-        }
-      } else {
-        // New item - need to add it
-        let { data: item } = await supabase
+        })
+      )
+    }
+
+    // Handle new items if any
+    if (toAdd.length > 0) {
+      const newItemNames = toAdd.map(ing => ing.name)
+
+      // Batch fetch existing items
+      const { data: existingItemsToAdd } = await supabase
+        .from('items')
+        .select('id, name')
+        .eq('shopping_group_id', groupId)
+        .in('name', newItemNames)
+
+      const existingItemsToAddMap = new Map(
+        (existingItemsToAdd || []).map(item => [item.name, item.id])
+      )
+
+      // Identify which items need to be created
+      const itemsToCreate = toAdd
+        .filter(ing => !existingItemsToAddMap.has(ing.name))
+        .map(ing => ({
+          name: ing.name,
+          shopping_group_id: groupId
+        }))
+
+      // Batch create new items if any
+      if (itemsToCreate.length > 0) {
+        const { data: newItems } = await supabase
           .from('items')
-          .select('id')
-          .eq('name', normalizedName)
-          .eq('shopping_group_id', groupId)
-          .single()
+          .insert(itemsToCreate)
+          .select('id, name')
 
-        if (!item) {
-          const { data: newItem } = await supabase
-            .from('items')
-            .insert({ name: normalizedName, shopping_group_id: groupId })
-            .select('id')
-            .single()
-          item = newItem
-        }
-
-        if (item) {
-          await supabase
-            .from('recipe_items')
-            .insert({
-              recipe_id: id,
-              item_id: item.id,
-              amount: ing.amount || null
-            })
-        }
+        newItems?.forEach(item => {
+          existingItemsToAddMap.set(item.name, item.id)
+        })
       }
+
+      // Batch create recipe_items for new ingredients
+      const recipeItemsToCreate = toAdd.map(ing => ({
+        recipe_id: id,
+        item_id: existingItemsToAddMap.get(ing.name)!,
+        amount: ing.amount
+      }))
+
+      await supabase
+        .from('recipe_items')
+        .insert(recipeItemsToCreate)
     }
 
     // Delete items that are no longer in the recipe
@@ -404,21 +447,28 @@ export async function getRecipe(id: string) {
 // Planning session actions
 export async function createPlanningSession(startDate: string, endDate: string) {
   const groupId = await getUserGroupId()
-  if (!groupId) return null
+  if (!groupId) return { success: false, error: 'Not authenticated' }
 
   const supabase = await createClient()
 
-  const { data } = await supabase
-    .from('planning_sessions')
-    .insert({
-      start_date: startDate,
-      end_date: endDate,
-      shopping_group_id: groupId
-    })
-    .select()
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('planning_sessions')
+      .insert({
+        start_date: startDate,
+        end_date: endDate,
+        shopping_group_id: groupId
+      })
+      .select()
+      .single()
 
-  return data || null
+    if (error) throw error
+
+    return { success: true, session: data }
+  } catch (error) {
+    console.error('Create planning session error:', error)
+    return { success: false, error: 'Failed to create planning session' }
+  }
 }
 
 // Get all planning sessions for the group
