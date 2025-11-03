@@ -1,12 +1,14 @@
 // src/Components/RecipesList.tsx
 'use client'
 
-import { Title, Button, Group, ActionIcon, Modal, Text } from '@mantine/core'
+import { Title, Button, Group, ActionIcon, Text } from '@mantine/core'
 import { Table } from '@mantine/core'
 import { IconEdit, IconTrash, IconPlus } from '@tabler/icons-react'
 import Link from 'next/link'
 import { useState } from 'react'
 import { deleteRecipe } from '@/lib/actions'
+import { showSuccess, showError } from '@/lib/notifications'
+import { ConfirmationModal } from './ConfirmationModal'
 
 interface Recipe {
   id: string
@@ -49,6 +51,9 @@ export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
     // If deletion failed, add the recipe back
     if (!result.success) {
       setRecipes(prev => [...prev, deletedRecipe])
+      showError(result.error || 'Failed to delete recipe')
+    } else {
+      showSuccess(`Recipe "${deletedRecipe.name}" deleted successfully`)
     }
 
     setDeleting(false)
@@ -114,24 +119,15 @@ export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
       )}
 
       {/* Delete Confirmation Modal */}
-      <Modal
+      <ConfirmationModal
         opened={deleteModalOpen}
         onClose={handleDeleteCancel}
+        onConfirm={handleDeleteConfirm}
         title="Delete Recipe"
-        centered
-      >
-        <Text mb="md">
-          Are you sure you want to delete &quot;{recipeToDelete?.name}&quot;? This action cannot be undone.
-        </Text>
-        <Group justify="flex-end">
-          <Button variant="subtle" onClick={handleDeleteCancel} disabled={deleting}>
-            Cancel
-          </Button>
-          <Button color="red" onClick={handleDeleteConfirm} loading={deleting}>
-            Delete Recipe
-          </Button>
-        </Group>
-      </Modal>
+        message={`Are you sure you want to delete "${recipeToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete Recipe"
+        loading={deleting}
+      />
     </>
   )
 }

@@ -124,17 +124,19 @@ Streamlines the process of planning meals and generating grocery lists by:
   - [x] Performance testing (query optimization) 
 
 - [ ] **UI/UX Quick Wins**
-  - [ ] Toast notifications for user actions (recipe saved, item added, etc.)
-  - [ ] Loading spinners for async operations
-  - [ ] Drag handles for better affordance in store ordering
-  - [ ] Confirmation tooltips for destructive actions
-  - [ ] Visual spacing improvements (card elevation, section dividers)
+  - [x] Toast notifications for user actions (recipe saved, item added, etc.)
+  - [x] Loading spinners for async operations
+  - [x] Drag handles for better affordance in store ordering
+  - [x] Confirmation tooltips for destructive actions
+  - [x] Visual spacing improvements (card elevation, section dividers)
   - [ ] Icon and color consistency across app
   - [ ] Semantic color usage - success green, warning orange, error red
   - [ ] Text hierarchy with better size/weight combinations
   - [ ] Consistent button styles across all components
   - [ ] Better touch targets for mobile
   - [ ] Fixed action buttons for critical actions (Add Recipe, Start Session)
+
+- [ ] Ensure caught errors are logged to Supabase
 
 ### Slice 9: Prepping for more users and contributors
 - [ ] Unit tests

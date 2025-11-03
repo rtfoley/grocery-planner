@@ -15,6 +15,7 @@ import { CalendarMealList } from './CalendarMealList'
 import { MealDialogData } from './MealDialog'
 import { useDisclosure, useMediaQuery } from '@mantine/hooks'
 import { getAdjustedDateFromString } from '@/lib/utilities'
+import { showSuccess, showError } from '@/lib/notifications'
 
 interface MealPlannerProps {
   recipes: RecipeWithItems[]
@@ -109,6 +110,7 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
 
       if (!result.success || !result.session) {
         console.error('Failed to create planning session:', result.error);
+        showError(result.error || 'Failed to create planning session');
         return;
       }
 
@@ -137,6 +139,8 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       const sessions = await getPlanningSessions();
       setAllSessions(sessions);
 
+      showSuccess('Planning session created successfully');
+
       close();
     } finally {
       setIsCreatingSession(false)
@@ -161,9 +165,14 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   }
 
   const addAdHocItem = async (itemName: string, amount: string) => {
-    const newItem = await createAdhocItem(planningSessionId!, itemName, amount)
-    if (newItem) {
-      setAdHocItems(prev => [...prev, newItem])
+    try {
+      const newItem = await createAdhocItem(planningSessionId!, itemName, amount)
+      if (newItem) {
+        setAdHocItems(prev => [...prev, newItem])
+        showSuccess('Item added to shopping list');
+      }
+    } catch {
+      showError('Failed to add item');
     }
   }
 
@@ -201,29 +210,38 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
   const handleAddMeal = async (date: string | null, mealData: MealDialogData) => {
     if (!planningSessionId) return;
 
-    // Create the meal
-    const newMeal = await createMeal(planningSessionId, date, mealData.name);
-    if (!newMeal) return;
-
-    // Add recipes to meal
-    for (const recipeName of mealData.recipeNames) {
-      const recipe = recipes.find(r => r.name === recipeName);
-      if (recipe) {
-        await addRecipeToMeal(newMeal.id, recipe.id);
+    try {
+      // Create the meal
+      const newMeal = await createMeal(planningSessionId, date, mealData.name);
+      if (!newMeal) {
+        showError('Failed to create meal');
+        return;
       }
-    }
 
-    // Add items to meal
-    for (const item of mealData.items) {
-      const foundItem = allItems.find(i => i.name === item.name);
-      if (foundItem) {
-        await addItemToMeal(newMeal.id, foundItem.id, item.amount || null);
+      // Add recipes to meal
+      for (const recipeName of mealData.recipeNames) {
+        const recipe = recipes.find(r => r.name === recipeName);
+        if (recipe) {
+          await addRecipeToMeal(newMeal.id, recipe.id);
+        }
       }
-    }
 
-    // Reload meals to get complete data
-    const updatedMeals = await getMeals(planningSessionId);
-    setMeals(updatedMeals);
+      // Add items to meal
+      for (const item of mealData.items) {
+        const foundItem = allItems.find(i => i.name === item.name);
+        if (foundItem) {
+          await addItemToMeal(newMeal.id, foundItem.id, item.amount || null);
+        }
+      }
+
+      // Reload meals to get complete data
+      const updatedMeals = await getMeals(planningSessionId);
+      setMeals(updatedMeals);
+
+      showSuccess('Meal added successfully');
+    } catch {
+      showError('Failed to add meal');
+    }
   }
 
   const updateMealRecipes = async (mealId: string, existingMeal: MealWithDetails, newRecipeNames: string[]) => {
@@ -273,23 +291,40 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     const existingMeal = meals.find(m => m.id === mealId);
     if (!existingMeal) return;
 
-    // Update meal name if changed
-    if (mealData.name !== (existingMeal.name || '')) {
-      await updateMeal(mealId, { name: mealData.name });
+    try {
+      // Update meal name if changed
+      if (mealData.name !== (existingMeal.name || '')) {
+        await updateMeal(mealId, { name: mealData.name });
+      }
+
+      // Update recipes and items
+      await updateMealRecipes(mealId, existingMeal, mealData.recipeNames);
+      await updateMealItems(mealId, existingMeal, mealData.items);
+
+      // Reload meals to get complete data
+      const updatedMeals = await getMeals(planningSessionId);
+      setMeals(updatedMeals);
+
+      showSuccess('Meal updated successfully');
+    } catch {
+      showError('Failed to update meal');
     }
-
-    // Update recipes and items
-    await updateMealRecipes(mealId, existingMeal, mealData.recipeNames);
-    await updateMealItems(mealId, existingMeal, mealData.items);
-
-    // Reload meals to get complete data
-    const updatedMeals = await getMeals(planningSessionId);
-    setMeals(updatedMeals);
   }
 
   const handleDeleteMeal = async (mealId: string) => {
-    setMeals(prev => prev.filter(m => m.id !== mealId));
-    await deleteMeal(mealId);
+    try {
+      setMeals(prev => prev.filter(m => m.id !== mealId));
+      await deleteMeal(mealId);
+
+      showSuccess('Meal deleted successfully');
+    } catch {
+      showError('Failed to delete meal');
+      // Reload meals to restore state on error
+      if (planningSessionId) {
+        const updatedMeals = await getMeals(planningSessionId);
+        setMeals(updatedMeals);
+      }
+    }
   }
 
   // Extract selected recipes from meals for shopping list

@@ -16,6 +16,7 @@ import { IconPlus, IconTrash } from '@tabler/icons-react'
 import { useRouter } from 'next/navigation'
 import { createRecipe, updateRecipe, getItems } from '@/lib/actions'
 import { ItemAutocomplete } from './ItemAutocomplete'
+import { showSuccess, showError } from '@/lib/notifications'
 
 interface Ingredient {
   item: string
@@ -78,23 +79,25 @@ export function RecipeForm({ initialData, isEdit = false, recipeId }: RecipeForm
 
     // Filter out empty ingredients
     const validIngredients = values.ingredients.filter(ing => ing.item.trim().length > 0)
-    
+
     if (validIngredients.length === 0) {
       setError('At least one ingredient is required')
       setLoading(false)
       return
     }
 
-    const result = isEdit && recipeId 
+    const result = isEdit && recipeId
       ? await updateRecipe(recipeId, values.name, validIngredients)
       : await createRecipe(values.name, validIngredients)
-    
+
     if (result.success) {
+      showSuccess(`Recipe "${values.name}" ${isEdit ? 'updated' : 'created'} successfully`)
       router.push('/recipes')
     } else {
       setError(result.error || 'Failed to save recipe')
+      showError(result.error || 'Failed to save recipe')
     }
-    
+
     setLoading(false)
   }
 

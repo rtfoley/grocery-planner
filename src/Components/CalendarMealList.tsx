@@ -16,9 +16,9 @@ interface CalendarMealListProps {
   sessionEndDate: string | null
   recipes: RecipeWithItems[]
   allItems: Item[]
-  onAddMeal: (date: string | null, mealData: MealDialogData) => void
-  onUpdateMeal: (mealId: string, mealData: MealDialogData) => void
-  onDeleteMeal: (mealId: string) => void
+  onAddMeal: (date: string | null, mealData: MealDialogData) => Promise<void>
+  onUpdateMeal: (mealId: string, mealData: MealDialogData) => Promise<void>
+  onDeleteMeal: (mealId: string) => Promise<void>
 }
 
 interface CalendarDay {
@@ -100,11 +100,11 @@ export function CalendarMealList({
     setSelectedDate(null)
   }
 
-  const handleSaveMeal = (mealData: MealDialogData) => {
+  const handleSaveMeal = async (mealData: MealDialogData) => {
     if (editingMeal) {
-      onUpdateMeal(editingMeal.id, mealData)
+      await onUpdateMeal(editingMeal.id, mealData)
     } else {
-      onAddMeal(selectedDate, mealData)
+      await onAddMeal(selectedDate, mealData)
     }
     handleCloseDialog()
   }
@@ -131,7 +131,7 @@ export function CalendarMealList({
         allItems={allItems}
       />
 
-      <Card withBorder padding="md">
+      <Card withBorder shadow="sm" padding="lg">
         <Stack gap="md">
           <Title order={3}>Meals</Title>
 

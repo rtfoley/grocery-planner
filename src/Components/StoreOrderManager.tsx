@@ -128,25 +128,43 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
 
   // Sortable item used in ordered list
   function SortableOrderedItem({ item, index }: { item: Item; index: number }) {
-    const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id })
-    const style = { transform: CSS.Transform.toString(transform), transition }
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id })
+    const style = {
+      transform: CSS.Transform.toString(transform),
+      transition,
+      opacity: isDragging ? 0.5 : 1,
+    }
 
     return (
-      <div ref={setNodeRef} style={style} {...attributes}>
-        <Card withBorder p="sm" style={{ cursor: 'grab' }}>
-          <Group justify='space-between'>
-            <Text size="sm">
+      <div ref={setNodeRef} style={style}>
+        <Card withBorder p="sm">
+          <Group justify='space-between' wrap="nowrap">
+            {/* Drag handle - larger touch target */}
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              size="lg"
+              style={{ cursor: 'grab', touchAction: 'none' }}
+              {...attributes}
+              {...listeners}
+              aria-label="Drag to reorder"
+            >
+              <IconGripVertical size={20} />
+            </ActionIcon>
+
+            <Text size="sm" style={{ flex: 1 }}>
               <strong>{index + 1}.</strong>&nbsp;{item.name}
             </Text>
 
-            <Group>
-              <ActionIcon variant="subtle" {...listeners} aria-label="Drag to reorder">
-                <IconGripVertical size={16} />
-              </ActionIcon>
-              <ActionIcon color="red" variant="subtle" onClick={() => removeFromOrder(item.id)} aria-label="Remove from route">
-                <IconTrash size={16} />
-              </ActionIcon>
-            </Group>
+            <ActionIcon
+              color="red"
+              variant="subtle"
+              size="md"
+              onClick={() => removeFromOrder(item.id)}
+              aria-label="Remove from route"
+            >
+              <IconTrash size={16} />
+            </ActionIcon>
           </Group>
         </Card>
       </div>

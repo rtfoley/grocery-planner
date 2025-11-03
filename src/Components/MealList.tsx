@@ -12,9 +12,9 @@ interface MealListProps {
   sessionEndDate: string | null;
   recipes: Recipe[];
   allItems: Item[];
-  onAddMeal: (date: string | null, mealData: MealDialogData) => void;
-  onUpdateMeal: (mealId: string, mealData: MealDialogData) => void;
-  onDeleteMeal: (mealId: string) => void;
+  onAddMeal: (date: string | null, mealData: MealDialogData) => Promise<void>;
+  onUpdateMeal: (mealId: string, mealData: MealDialogData) => Promise<void>;
+  onDeleteMeal: (mealId: string) => Promise<void>;
 }
 
 export function MealList({
@@ -91,14 +91,15 @@ export function MealList({
     setDialogOpened(true);
   };
   
-  const handleSaveMeal = (mealData: MealDialogData) => {
+  const handleSaveMeal = async (mealData: MealDialogData) => {
     if (editingMeal) {
       // Update existing meal
-      onUpdateMeal(editingMeal.id, mealData);
+      await onUpdateMeal(editingMeal.id, mealData);
     } else {
       // Create new meal
-      onAddMeal(addingForDate, mealData);
+      await onAddMeal(addingForDate, mealData);
     }
+    handleCloseDialog();
   };
 
   const handleCloseDialog = () => {
@@ -109,7 +110,7 @@ export function MealList({
 
   return (
     <>
-      <Card>
+      <Card withBorder shadow="sm" padding="lg">
         <Stack gap="sm">
           <Title order={3}>Meals</Title>
           {sortedDates.map((date) => {

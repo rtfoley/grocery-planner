@@ -2,7 +2,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl } from '@mantine/core'
+import { Card, Title, Text, Stack, Checkbox, Group, TextInput, Button, ActionIcon, Alert, SegmentedControl, Divider } from '@mantine/core'
 import { IconPlus, IconTrash, IconAlertCircle } from '@tabler/icons-react'
 import { AdhocItemWithItem, ItemExclusionWithItem, MealWithDetails, RecipeWithItems, StapleSelectionWithItem, Item, StapleStatusEnum } from '@/lib/types'
 import { ItemAutocomplete } from './ItemAutocomplete'
@@ -247,7 +247,7 @@ export function ShoppingList({
   };
 
   return (
-    <Card>
+    <Card withBorder shadow="sm" padding="lg">
       <Group justify="space-between" align="center" mb="md">
         <Title order={3}>Shopping List</Title>
         <Group gap="xs">
@@ -331,7 +331,8 @@ export function ShoppingList({
       )}
 
       {/* Add ad-hoc item form */}
-      <Stack gap="xs" mt="md" pt="md" style={{ borderTop: '1px solid var(--mantine-color-gray-3)' }}>
+      <Divider my="md" />
+      <Stack gap="xs">
         <Text size="sm" fw={500}>Add Item</Text>
         <Group align="flex-end">
           <ItemAutocomplete

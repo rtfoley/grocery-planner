@@ -17,7 +17,7 @@ import { ItemAutocomplete } from "./ItemAutocomplete";
 interface MealDialogProps {
   opened: boolean;
   onClose: () => void;
-  onSave: (mealData: MealDialogData) => void;
+  onSave: (mealData: MealDialogData) => Promise<void>;
   meal?: MealWithDetails | null;
   recipes: Recipe[];
   allItems: Item[];
@@ -42,6 +42,7 @@ export function MealDialog({
   const [selectedItems, setSelectedItems] = useState<
     Array<{ name: string; amount: string }>
   >([]);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form state for adding new recipe
   const [newRecipeName, setNewRecipeName] = useState("");
@@ -127,13 +128,18 @@ export function MealDialog({
     setSelectedItems(selectedItems.filter((i) => i.name !== itemName));
   };
 
-  const handleSave = () => {
-    onSave({
-      name: mealName.trim(),
-      recipeNames: selectedRecipes,
-      items: selectedItems,
-    });
-    handleClose();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await onSave({
+        name: mealName.trim(),
+        recipeNames: selectedRecipes,
+        items: selectedItems,
+      });
+      handleClose();
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleClose = () => {
@@ -281,10 +287,12 @@ export function MealDialog({
 
         {/* Actions */}
         <Group justify="flex-end" gap="sm" mt="md">
-          <Button variant="subtle" onClick={handleClose}>
+          <Button variant="subtle" onClick={handleClose} disabled={isSaving}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save Meal</Button>
+          <Button onClick={handleSave} loading={isSaving}>
+            Save Meal
+          </Button>
         </Group>
       </Stack>
     </Modal>

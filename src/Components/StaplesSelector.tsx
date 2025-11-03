@@ -9,12 +9,12 @@ interface StaplesSelectorProps {
   onStapleSelection: (staple: StapleSelectionWithItem, newStatus: StapleStatus) => void
 }
 
-export function StaplesSelector({  
-  stapleSelections, 
-  onStapleSelection 
+export function StaplesSelector({
+  stapleSelections,
+  onStapleSelection
 }: StaplesSelectorProps) {
   return (
-    <Card>
+    <Card withBorder shadow="sm" padding="lg">
       <Title order={3} mb="md">Staples</Title>
       <Stack gap="xs">
         {stapleSelections.map((staple: StapleSelectionWithItem) => {

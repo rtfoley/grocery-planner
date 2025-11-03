@@ -1,17 +1,36 @@
 import { MealWithDetails } from "@/lib/types";
 import { Card, Text, Group, ActionIcon, Stack, Badge } from "@mantine/core";
 import { IconEdit, IconTrash } from "@tabler/icons-react";
+import { useState } from "react";
+import { ConfirmationModal } from "./ConfirmationModal";
 
 interface MealCardProps {
   meal: MealWithDetails;
   onEdit: (meal: MealWithDetails) => void;
-  onDelete: (mealId: string) => void;
+  onDelete: (mealId: string) => Promise<void>;
 }
 
 export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   const hasRecipes = meal.meal_recipes && meal.meal_recipes.length > 0;
   const hasItems = meal.meal_items && meal.meal_items.length > 0;
   const isEmpty = !hasRecipes && !hasItems;
+
+  const handleDeleteClick = () => {
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await onDelete(meal.id);
+      setDeleteModalOpen(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <Card withBorder padding="xs" radius="sm">
@@ -42,7 +61,7 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
               variant="subtle"
               color="red"
               size="xs"
-              onClick={() => onDelete(meal.id)}
+              onClick={handleDeleteClick}
               aria-label="Delete meal"
             >
               <IconTrash size={14} />
@@ -80,6 +99,16 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
           </Stack>
         )}
       </Stack>
+
+      <ConfirmationModal
+        opened={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Meal"
+        message={`Are you sure you want to delete "${meal.name || 'this meal'}"? This action cannot be undone.`}
+        confirmLabel="Delete Meal"
+        loading={deleting}
+      />
     </Card>
   );
 }
