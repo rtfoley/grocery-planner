@@ -115,7 +115,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] Mobile shopping list view with progress tracking
 - [x] Group names use user email
 
-### Slice 8: Polish 🚧 IN PROGRESS
+### Slice 8: Polish ✅ COMPLETE
 - [ ] **Production Testing & Polish**
   - [x] Disable public signups for now
   - [x] Facilitate Supabase invites
