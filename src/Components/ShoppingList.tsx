@@ -312,13 +312,13 @@ export function ShoppingList({
                   />
                   {isAdHoc ? (
                     <ActionIcon
-                      size="sm"
+                      size="md"
                       variant="subtle"
                       color="red"
                       onClick={() => handleRemoveAdHocItem(item.itemName)}
                       aria-label={`Remove ${item.itemName}`}
                     >
-                      <IconTrash size={14} />
+                      <IconTrash size={16} />
                     </ActionIcon>
                   ) : (
                     <></>

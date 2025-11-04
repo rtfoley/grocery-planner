@@ -48,23 +48,23 @@ export function MealCard({ meal, onEdit, onDelete }: MealCardProps) {
               </Text>
             )}
           </div>
-          <Group gap={4}>
+          <Group gap={6}>
             <ActionIcon
               variant="subtle"
-              size="xs"
+              size="md"
               onClick={() => onEdit(meal)}
               aria-label="Edit meal"
             >
-              <IconEdit size={14} />
+              <IconEdit size={16} />
             </ActionIcon>
             <ActionIcon
               variant="subtle"
               color="red"
-              size="xs"
+              size="md"
               onClick={handleDeleteClick}
               aria-label="Delete meal"
             >
-              <IconTrash size={14} />
+              <IconTrash size={16} />
             </ActionIcon>
           </Group>
         </Group>

@@ -75,13 +75,17 @@ export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
             href={`/recipes/${recipe.id}`}
             variant="subtle"
             color="blue"
+            size="md"
+            aria-label="Edit recipe"
           >
             <IconEdit size={16} />
           </ActionIcon>
-          <ActionIcon 
-            variant="subtle" 
+          <ActionIcon
+            variant="subtle"
             color="red"
+            size="md"
             onClick={() => handleDeleteClick(recipe)}
+            aria-label={`Delete ${recipe.name}`}
           >
             <IconTrash size={16} />
           </ActionIcon>

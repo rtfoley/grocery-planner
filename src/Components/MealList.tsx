@@ -143,7 +143,7 @@ export function MealList({
                     <Button
                       size="compact-xs"
                       variant="subtle"
-                      leftSection={<IconPlus size={12} />}
+                      leftSection={<IconPlus size={14} />}
                       onClick={() => handleAddMealClick(date)}
                     >
                       Add

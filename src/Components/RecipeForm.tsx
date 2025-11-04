@@ -151,7 +151,9 @@ export function RecipeForm({ initialData, isEdit = false, recipeId }: RecipeForm
                     <ActionIcon
                       color="red"
                       variant="subtle"
+                      size="md"
                       onClick={() => removeIngredient(index)}
+                      aria-label={`Remove ingredient ${index + 1}`}
                     >
                       <IconTrash size={16} />
                     </ActionIcon>

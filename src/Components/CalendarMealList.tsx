@@ -190,9 +190,10 @@ export function CalendarMealList({
                             </div>
                             {inSession && (
                               <ActionIcon
-                                size="sm"
+                                size="md"
                                 variant="subtle"
                                 onClick={() => handleOpenDialog(day.date)}
+                                aria-label="Add meal"
                               >
                                 <IconPlus size={16} />
                               </ActionIcon>

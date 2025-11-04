@@ -206,7 +206,7 @@ export function MealDialog({
                   <ActionIcon
                     variant="subtle"
                     color="red"
-                    size="sm"
+                    size="md"
                     onClick={() => handleRemoveRecipe(recipeName)}
                     aria-label={`Remove ${recipeName}`}
                   >
@@ -269,7 +269,7 @@ export function MealDialog({
                   <ActionIcon
                     variant="subtle"
                     color="red"
-                    size="sm"
+                    size="md"
                     onClick={() => handleRemoveItem(item.name)}
                     aria-label={`Remove ${item.name}`}
                   >
