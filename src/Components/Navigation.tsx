@@ -66,7 +66,7 @@ export function Navigation() {
 
   return (
     <Box style={{ borderBottom: '1px solid var(--mantine-color-gray-3)', marginBottom: '1rem' }}>
-      <Container size="lg">
+      <Container size="xl">
         <Group h={60} justify="space-between">
           {/* Desktop navigation */}
           <Group visibleFrom="sm">
