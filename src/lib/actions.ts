@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import { Database } from './database.types'
+import { logError } from './errorLogger'
 
 type StapleStatus = Database['public']['Enums']['staple_status']
 
@@ -46,7 +47,8 @@ export async function createItem(name: string, is_staple: boolean = false, stapl
 
     revalidatePath('/items')
     return { success: true, item }
-  } catch {
+  } catch (error) {
+    logError(error, { action: 'createItem', itemName: normalizedName, groupId })
     return { success: false, error: 'Item already exists or invalid name' }
   }
 }
@@ -88,7 +90,8 @@ export async function updateItemStapleStatus(id: string, is_staple: boolean, sta
 
     revalidatePath('/items')
     return { success: true, item }
-  } catch {
+  } catch (error) {
+    logError(error, { action: 'updateItemStapleStatus', itemId: id, is_staple, groupId })
     return { success: false, error: 'Failed to update staple status' }
   }
 }
@@ -113,7 +116,8 @@ export async function updateItemOrder(itemId: string, orderIndex: number) {
 
     revalidatePath('/store-order')
     return { success: true, item }
-  } catch {
+  } catch (error) {
+    logError(error, { action: 'updateItemOrder', itemId, orderIndex, groupId })
     return { success: false, error: 'Failed to update item order' }
   }
 }
@@ -137,7 +141,8 @@ export async function updateMultipleItemOrders(updates: Array<{ id: string, orde
 
     revalidatePath('/store-order')
     return { success: true }
-  } catch {
+  } catch (error) {
+    logError(error, { action: 'updateMultipleItemOrders', updateCount: updates.length, groupId })
     return { success: false, error: 'Failed to update item orders' }
   }
 }
@@ -229,7 +234,7 @@ export async function createRecipe(name: string, ingredients: Array<{ item: stri
     revalidatePath('/recipes')
     return { success: true, recipe: completeRecipe }
   } catch (error) {
-    console.error('Create recipe error:', error)
+    logError(error, { action: 'createRecipe', groupId })
     return { success: false, error: 'Failed to create recipe' }
   }
 }
@@ -374,7 +379,7 @@ export async function updateRecipe(id: string, name: string, ingredients: Array<
     revalidatePath(`/recipes/${id}`)
     return { success: true, recipe: completeRecipe }
   } catch (error) {
-    console.error('Update recipe error:', error)
+    logError(error, { action: 'updateRecipe', recipeId: id, groupId })
     return { success: false, error: 'Failed to update recipe' }
   }
 }
@@ -396,7 +401,8 @@ export async function deleteRecipe(id: string) {
 
     revalidatePath('/recipes')
     return { success: true }
-  } catch {
+  } catch (error) {
+    logError(error, { action: 'deleteRecipe', recipeId: id, groupId })
     return { success: false, error: 'Failed to delete recipe' }
   }
 }
@@ -466,7 +472,7 @@ export async function createPlanningSession(startDate: string, endDate: string) 
 
     return { success: true, session: data }
   } catch (error) {
-    console.error('Create planning session error:', error)
+    logError(error, { action: 'createPlanningSession', groupId, startDate, endDate })
     return { success: false, error: 'Failed to create planning session' }
   }
 }
@@ -927,7 +933,7 @@ export async function addShoppingListItemByName(planningSessionId: string, itemN
     .single()
 
   if (error) {
-    console.error('Add shopping list item error:', error)
+    logError(error, { action: 'addShoppingListItem', planningSessionId, itemName: normalizedName, groupId })
     return null
   }
 
@@ -960,7 +966,7 @@ export async function toggleShoppingListItem(
     .single()
 
   if (error) {
-    console.error('Toggle shopping list item error:', error)
+    logError(error, { action: 'toggleShoppingListItem', planningSessionId, itemId, checked })
     return null
   }
 

@@ -136,7 +136,7 @@ Streamlines the process of planning meals and generating grocery lists by:
   - [ ] Better touch targets for mobile
   - [ ] Fixed action buttons for critical actions (Add Recipe, Start Session)
 
-- [ ] Ensure caught errors are logged to Supabase
+- [x] Ensure caught errors are logged (to Vercel logs)
 
 ### Slice 9: Prepping for more users and contributors
 - [ ] Unit tests
