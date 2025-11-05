@@ -1,20 +1,36 @@
-import { MealWithDetails, Recipe, Item } from "@/lib/types";
+// src/Components/MealList.tsx - Unified meal planning view for all screen sizes
+'use client'
+
+import { MealWithDetails, RecipeWithItems, Item } from "@/lib/types";
 import { getAdjustedDateFromString } from "@/lib/utilities";
-import { Card, Title, Stack, Group, Text, Button } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
-import { useState } from "react";
-import { MealCard } from "./MealCard";
-import { MealDialog, MealDialogData } from "./MealDialog";
+import { Card, Title, Stack, Group, Text, ActionIcon, Button, Paper, Grid } from "@mantine/core";
+import { IconTrash, IconPlus } from "@tabler/icons-react";
+import { useMemo, useState } from "react";
+import { MealDialogData } from "./MealDialog";
+import { AddRecipeDialog } from "./AddRecipeDialog";
+import { AddItemDialog } from "./AddItemDialog";
 
 interface MealListProps {
   meals: MealWithDetails[];
   sessionStartDate: string | null;
   sessionEndDate: string | null;
-  recipes: Recipe[];
+  recipes: RecipeWithItems[];
   allItems: Item[];
   onAddMeal: (date: string | null, mealData: MealDialogData) => Promise<void>;
   onUpdateMeal: (mealId: string, mealData: MealDialogData) => Promise<void>;
   onDeleteMeal: (mealId: string) => Promise<void>;
+}
+
+interface DayMeals {
+  date: string
+  dateObj: Date
+  dinner: MealWithDetails | null
+}
+
+interface DialogState {
+  isOpen: boolean
+  day: DayMeals | null
+  mealType: 'Dinner' | 'General' | null
 }
 
 export function MealList({
@@ -25,162 +41,335 @@ export function MealList({
   allItems,
   onAddMeal,
   onUpdateMeal,
-  onDeleteMeal,
 }: MealListProps) {
-  const [dialogOpened, setDialogOpened] = useState(false);
-  const [editingMeal, setEditingMeal] = useState<MealWithDetails | null>(null);
-  const [addingForDate, setAddingForDate] = useState<string | null>(null);
+  const [recipeDialogState, setRecipeDialogState] = useState<DialogState>({
+    isOpen: false,
+    day: null,
+    mealType: null
+  })
 
-  // Generate all dates in session range
-  const generateSessionDates = (): string[] => {
-    if (!sessionStartDate || !sessionEndDate) return [];
+  const [itemDialogState, setItemDialogState] = useState<DialogState>({
+    isOpen: false,
+    day: null,
+    mealType: null
+  })
 
-    const dates: string[] = [];
-    const start = getAdjustedDateFromString(sessionStartDate);
-    const end = getAdjustedDateFromString(sessionEndDate);
+  // General (non-dinner) meals are those not attached to a date or labeled "General"
+  const generalMeals = meals.filter(
+    (m) => !m.date || m.name?.toLowerCase() === 'general'
+  )
 
-    const current = new Date(start);
+  // Generate days for dinners
+  const days = useMemo((): DayMeals[] => {
+    if (!sessionStartDate || !sessionEndDate) return []
+
+    const start = getAdjustedDateFromString(sessionStartDate)
+    const end = getAdjustedDateFromString(sessionEndDate)
+
+    const daysArray: DayMeals[] = []
+    const current = new Date(start)
+
     while (current <= end) {
-      dates.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
+      const dateStr = current.toISOString().split('T')[0]
+      const dayMeals = meals.filter(m => m.date === dateStr)
+
+      daysArray.push({
+        date: dateStr,
+        dateObj: new Date(current),
+        dinner: dayMeals.find(m => m.name?.toLowerCase() === 'dinner') || null
+      })
+
+      current.setDate(current.getDate() + 1)
     }
 
-    return dates;
-  };
+    return daysArray
+  }, [sessionStartDate, sessionEndDate, meals])
 
-  // Group meals by date
-  const mealsByDate = meals.reduce((acc, meal) => {
-    const date = meal.date || "undated";
-    if (!acc[date]) acc[date] = [];
-    acc[date].push(meal);
-    return acc;
-  }, {} as Record<string, MealWithDetails[]>);
+  const handleAddRecipe = async (recipeName: string) => {
+    const { day, mealType } = recipeDialogState
+    if (!mealType) return
 
-  // Add all session dates (even if no meals)
-  const sessionDates = generateSessionDates();
-  sessionDates.forEach(date => {
-    if (!mealsByDate[date]) {
-      mealsByDate[date] = [];
+    if (mealType === 'Dinner') {
+      if (!day) return
+      const meal = day.dinner
+      const existingRecipes = meal?.meal_recipes?.map(mr => mr.recipe.name) || []
+      const existingItems = meal?.meal_items?.map(mi => ({ name: mi.item.name, amount: mi.amount || '' })) || []
+
+      if (meal) {
+        await onUpdateMeal(meal.id, {
+          name: 'Dinner',
+          recipeNames: [...existingRecipes, recipeName],
+          items: existingItems
+        })
+      } else {
+        await onAddMeal(day.date, {
+          name: 'Dinner',
+          recipeNames: [recipeName],
+          items: []
+        })
+      }
+    } else {
+      await onAddMeal(null, {
+        name: 'General',
+        recipeNames: [recipeName],
+        items: []
+      })
     }
-  });
-
-  // Ensure 'undated' always exists (even if empty)
-  if (!mealsByDate["undated"]) {
-    mealsByDate["undated"] = [];
   }
 
-  // Sort dates
-  const sortedDates = Object.keys(mealsByDate).sort((a, b) => {
-    if (a === "undated") return 1;
-    if (b === "undated") return -1;
-    return (
-      getAdjustedDateFromString(a).getTime() -
-      getAdjustedDateFromString(b).getTime()
-    );
-  });
+  const handleAddItem = async (itemName: string, amount: string) => {
+    const { day, mealType } = itemDialogState
+    if (!mealType) return
 
-  const handleAddMealClick = (date: string) => {
-    setAddingForDate(date === "undated" ? null : date);
-    setEditingMeal(null);
-    setDialogOpened(true);
-  };
+    if (mealType === 'Dinner') {
+      if (!day) return
+      const meal = day.dinner
+      const existingRecipes = meal?.meal_recipes?.map(mr => mr.recipe.name) || []
+      const existingItems = meal?.meal_items?.map(mi => ({ name: mi.item.name, amount: mi.amount || '' })) || []
 
-  const handleEditMeal = (meal: MealWithDetails) => {
-    setEditingMeal(meal);
-    setAddingForDate(null);
-    setDialogOpened(true);
-  };
-  
-  const handleSaveMeal = async (mealData: MealDialogData) => {
-    if (editingMeal) {
-      // Update existing meal
-      await onUpdateMeal(editingMeal.id, mealData);
+      if (meal) {
+        await onUpdateMeal(meal.id, {
+          name: 'Dinner',
+          recipeNames: existingRecipes,
+          items: [...existingItems, { name: itemName, amount }]
+        })
+      } else {
+        await onAddMeal(day.date, {
+          name: 'Dinner',
+          recipeNames: [],
+          items: [{ name: itemName, amount }]
+        })
+      }
     } else {
-      // Create new meal
-      await onAddMeal(addingForDate, mealData);
+      await onAddMeal(null, {
+        name: 'General',
+        recipeNames: [],
+        items: [{ name: itemName, amount }]
+      })
     }
-    handleCloseDialog();
-  };
+  }
 
-  const handleCloseDialog = () => {
-    setDialogOpened(false);
-    setEditingMeal(null);
-    setAddingForDate(null);
-  };
+  const handleRemove = async (
+    mealId: string,
+    mealType: 'Dinner' | 'General',
+    recipeNames: string[],
+    items: { name: string; amount: string }[]
+  ) => {
+    await onUpdateMeal(mealId, {
+      name: mealType,
+      recipeNames,
+      items
+    })
+  }
+
+  if (days.length === 0) {
+    return (
+      <Card withBorder shadow="sm" padding="lg">
+        <Text c="dimmed" ta="center">No session dates available</Text>
+      </Card>
+    )
+  }
 
   return (
-    <>
-      <Card withBorder shadow="sm" padding="lg">
-        <Stack gap="sm">
-          <Title order={3}>Meals</Title>
-          {sortedDates.map((date) => {
-            const dateMeals = mealsByDate[date];
-            const dateStr =
-              date === "undated"
-                ? "Additional Meals"
-                : getAdjustedDateFromString(date).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "numeric",
-                    day: "numeric",
-                  });
-
-            return (
-              <Card
-                key={date}
-                withBorder
-                padding="xs"
-                style={{ backgroundColor: "var(--mantine-color-default-hover)" }}
-              >
-                <Stack gap="xs">
-                  <Group justify="space-between" gap="xs">
-                    <Text
-                      size="sm"
-                      fw={600}
-                      c={date === "undated" ? "dimmed" : undefined}
-                    >
-                      {dateStr}
-                    </Text>
-                    <Button
-                      size="compact-xs"
-                      variant="subtle"
-                      leftSection={<IconPlus size={14} />}
-                      onClick={() => handleAddMealClick(date)}
-                    >
-                      Add
-                    </Button>
-                  </Group>
-
-                  {/* Meal cards */}
-                  {dateMeals.length > 0 ? (
-                    dateMeals.map((meal) => (
-                      <MealCard
-                        key={meal.id}
-                        meal={meal}
-                        onEdit={handleEditMeal}
-                        onDelete={onDeleteMeal}
-                      />
-                    ))
-                  ) : (
-                    <Text size="sm" c="dimmed" fs="italic">
-                      No meals
-                    </Text>
-                  )}
-                </Stack>
-              </Card>
-            );
-          })}
-        </Stack>
-      </Card>
-
-      {/* Meal Dialog */}
-      <MealDialog
-        opened={dialogOpened}
-        onClose={handleCloseDialog}
-        onSave={handleSaveMeal}
-        meal={editingMeal}
+    <div>
+      <AddRecipeDialog
+        opened={recipeDialogState.isOpen}
+        onClose={() => setRecipeDialogState({ isOpen: false, day: null, mealType: null })}
+        onSave={handleAddRecipe}
         recipes={recipes}
+      />
+
+      <AddItemDialog
+        opened={itemDialogState.isOpen}
+        onClose={() => setItemDialogState({ isOpen: false, day: null, mealType: null })}
+        onSave={handleAddItem}
         allItems={allItems}
       />
-    </>
-  );
+
+      <Grid>
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          {/* Dinners Section */}
+          <Card withBorder shadow="sm" padding="lg">
+            <Title order={3}>Weekly Dinners</Title>
+            <Stack gap="sm">
+              {days.map((day) => {
+                const meal = day.dinner
+                const recipes = meal?.meal_recipes?.map(mr => mr.recipe.name) || []
+                const items = meal?.meal_items?.map(mi => ({ name: mi.item.name, amount: mi.amount || '' })) || []
+
+                return (
+                  <Card key={day.date} withBorder padding="md">
+                    <Stack gap="sm">
+                      {/* Date Header */}
+                      <div>
+                        <Text size="sm" fw={700}>
+                          {day.dateObj.toLocaleDateString('en-US', { weekday: 'long' })}
+                        </Text>
+                        <Text size="sm" c="dimmed">
+                          {day.dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </Text>
+                      </div>
+
+                      {/* Recipes */}
+                      {recipes.map((recipeName, idx) => (
+                        <Group key={`recipe-${idx}`} gap="xs" wrap="nowrap" justify="space-between">
+                          <Text size="sm" fw={500}>
+                            {recipeName}
+                          </Text>
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="red"
+                            onClick={() => handleRemove(
+                              meal!.id,
+                              'Dinner',
+                              recipes.filter(r => r !== recipeName),
+                              items
+                            )}
+                          >
+                            <IconTrash size={12} />
+                          </ActionIcon>
+                        </Group>
+                      ))}
+
+                      {/* Items */}
+                      {items.map((item, idx) => (
+                        <Group key={`item-${idx}`} gap="xs" wrap="nowrap" justify="space-between">
+                          <Text size="sm" c="dimmed">
+                            {item.name}{item.amount ? ` (${item.amount})` : ''}
+                          </Text>
+                          <ActionIcon
+                            size="sm"
+                            variant="subtle"
+                            color="red"
+                            onClick={() => handleRemove(
+                              meal!.id,
+                              'Dinner',
+                              recipes,
+                              items.filter(i => i.name !== item.name)
+                            )}
+                          >
+                            <IconTrash size={12} />
+                          </ActionIcon>
+                        </Group>
+                      ))}
+
+                      {/* Add buttons */}
+                      <Group gap="xs" mt="xs">
+                        <Button
+                          leftSection={<IconPlus size={14} />}
+                          variant="light"
+                          size="xs"
+                          color="green"
+                          onClick={() => setRecipeDialogState({ isOpen: true, day, mealType: 'Dinner' })}
+                        >
+                          Add recipe
+                        </Button>
+                        <Button
+                          leftSection={<IconPlus size={14} />}
+                          variant="light"
+                          size="xs"
+                          color="blue"
+                          onClick={() => setItemDialogState({ isOpen: true, day, mealType: 'Dinner' })}
+                        >
+                          Add item
+                        </Button>
+                      </Group>
+                    </Stack>
+                  </Card>
+                )
+              })}
+            </Stack>
+          </Card>
+        </Grid.Col>
+        <Grid.Col span={{ base: 12, md: 6 }}>
+          {/* General Meals Section */}
+          <Card withBorder shadow="sm" padding="lg">
+            <Stack gap="md">
+              <Group justify="space-between" align="center">
+                <Title order={4}>Breakfasts, Lunches & Other Meals</Title>
+                <Group gap="xs">
+                  <Button
+                    leftSection={<IconPlus size={14} />}
+                    variant="light"
+                    size="xs"
+                    color="green"
+                    onClick={() => setRecipeDialogState({ isOpen: true, day: null, mealType: 'General' })}
+                  >
+                    Recipe
+                  </Button>
+                  <Button
+                    leftSection={<IconPlus size={14} />}
+                    variant="light"
+                    size="xs"
+                    color="blue"
+                    onClick={() => setItemDialogState({ isOpen: true, day: null, mealType: 'General' })}
+                  >
+                    Item
+                  </Button>
+                </Group>
+              </Group>
+
+              <Stack gap="xs">
+                {generalMeals.length === 0 && (
+                  <Text size="sm" c="dimmed">
+                    No general meals added yet.
+                  </Text>
+                )}
+                {generalMeals.map((meal) => {
+                  const recipes = meal.meal_recipes?.map(mr => mr.recipe.name) || []
+                  const items = meal.meal_items?.map(mi => ({ name: mi.item.name, amount: mi.amount || '' })) || []
+
+                  return (
+                    <Paper key={meal.id} withBorder p="sm">
+                      <Stack gap="xs">
+                        {recipes.map((recipeName, idx) => (
+                          <Group key={`gr-${idx}`} justify="space-between">
+                            <Text size="sm">{recipeName}</Text>
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="red"
+                              onClick={() => handleRemove(
+                                meal.id,
+                                'General',
+                                recipes.filter(r => r !== recipeName),
+                                items
+                              )}
+                            >
+                              <IconTrash size={12} />
+                            </ActionIcon>
+                          </Group>
+                        ))}
+                        {items.map((item, idx) => (
+                          <Group key={`gi-${idx}`} justify="space-between">
+                            <Text size="sm" c="dimmed">
+                              {item.name}{item.amount ? ` (${item.amount})` : ''}
+                            </Text>
+                            <ActionIcon
+                              size="sm"
+                              variant="subtle"
+                              color="red"
+                              onClick={() => handleRemove(
+                                meal.id,
+                                'General',
+                                recipes,
+                                items.filter(i => i.name !== item.name)
+                              )}
+                            >
+                              <IconTrash size={12} />
+                            </ActionIcon>
+                          </Group>
+                        ))}
+                      </Stack>
+                    </Paper>
+                  )
+                })}
+              </Stack>
+            </Stack>
+          </Card>
+        </Grid.Col>
+      </Grid>
+    </div>
+  )
 }

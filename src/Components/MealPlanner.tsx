@@ -11,9 +11,8 @@ import { ShoppingList } from './ShoppingList'
 import { StaplesSelector } from './StaplesSelector'
 import { addItemExclusion, createAdhocItem, createMeal, createPlanningSession, createStapleSelection, deleteAdhocItem, deleteItemExclusion, deleteMeal, getAdhocItems, getItemExclusions, getMeals, getPlanningSession, getPlanningSessions, getStapleSelections, updateAdhocItem, updateStapleSelection, addRecipeToMeal, addItemToMeal, removeRecipeFromMeal, removeMealItem, updateMeal } from '@/lib/actions'
 import { MealList } from './MealList'
-import { CalendarMealList } from './CalendarMealList'
 import { MealDialogData } from './MealDialog'
-import { useDisclosure, useMediaQuery } from '@mantine/hooks'
+import { useDisclosure } from '@mantine/hooks'
 import { getAdjustedDateFromString } from '@/lib/utilities'
 import { showSuccess, showError } from '@/lib/notifications'
 
@@ -237,8 +236,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       // Reload meals to get complete data
       const updatedMeals = await getMeals(planningSessionId);
       setMeals(updatedMeals);
-
-      showSuccess('Meal added successfully');
     } catch {
       showError('Failed to add meal');
     }
@@ -304,8 +301,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
       // Reload meals to get complete data
       const updatedMeals = await getMeals(planningSessionId);
       setMeals(updatedMeals);
-
-      showSuccess('Meal updated successfully');
     } catch {
       showError('Failed to update meal');
     }
@@ -315,8 +310,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     try {
       setMeals(prev => prev.filter(m => m.id !== mealId));
       await deleteMeal(mealId);
-
-      showSuccess('Meal deleted successfully');
     } catch {
       showError('Failed to delete meal');
       // Reload meals to restore state on error
@@ -337,8 +330,6 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
     open();
   }
 
-  // Use calendar view on medium+ screens, list view on mobile
-  const isLargeScreen = useMediaQuery('(min-width: 768px)')
 
   return (
     <Stack gap="xl">
@@ -445,30 +436,17 @@ export function MealPlanner({ recipes, allItems }: MealPlannerProps) {
         </Center>
       ) : (
         <Stack gap="xl">
-          {/* Meal List - Full Width - Calendar on large screens, List on mobile */}
-          {isLargeScreen ? (
-            <CalendarMealList
-              meals={meals}
-              sessionStartDate={currentSession?.start_date || null}
-              sessionEndDate={currentSession?.end_date || null}
-              recipes={recipes}
-              allItems={allItems}
-              onAddMeal={handleAddMeal}
-              onUpdateMeal={handleUpdateMeal}
-              onDeleteMeal={handleDeleteMeal}
-            />
-          ) : (
-            <MealList
-              meals={meals}
-              sessionStartDate={currentSession?.start_date || null}
-              sessionEndDate={currentSession?.end_date || null}
-              recipes={recipes}
-              allItems={allItems}
-              onAddMeal={handleAddMeal}
-              onUpdateMeal={handleUpdateMeal}
-              onDeleteMeal={handleDeleteMeal}
-            />
-          )}
+          {/* Meal List - Full Width - Unified view for all screen sizes */}
+          <MealList
+            meals={meals}
+            sessionStartDate={currentSession?.start_date || null}
+            sessionEndDate={currentSession?.end_date || null}
+            recipes={recipes}
+            allItems={allItems}
+            onAddMeal={handleAddMeal}
+            onUpdateMeal={handleUpdateMeal}
+            onDeleteMeal={handleDeleteMeal}
+          />
 
           {/* Staples and Shopping List - Side by Side */}
           <Grid>
