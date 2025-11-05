@@ -41,6 +41,7 @@ export function MealList({
   allItems,
   onAddMeal,
   onUpdateMeal,
+  onDeleteMeal,
 }: MealListProps) {
   const [recipeDialogState, setRecipeDialogState] = useState<DialogState>({
     isOpen: false,
@@ -155,11 +156,16 @@ export function MealList({
     recipeNames: string[],
     items: { name: string; amount: string }[]
   ) => {
-    await onUpdateMeal(mealId, {
-      name: mealType,
-      recipeNames,
-      items
-    })
+    // If removing the last recipe/item, delete the entire meal
+    if (recipeNames.length === 0 && items.length === 0) {
+      await onDeleteMeal(mealId)
+    } else {
+      await onUpdateMeal(mealId, {
+        name: mealType,
+        recipeNames,
+        items
+      })
+    }
   }
 
   // Reusable delete button component
