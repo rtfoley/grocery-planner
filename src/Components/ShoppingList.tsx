@@ -229,30 +229,13 @@ export function ShoppingList({
     }
   }
 
-  const shareViaShortcuts = (groceryItems: ShoppingItem[]): void => {
-      // Create set of excluded names for O(1) lookup
-    const excludedNames = new Set(excludedItems?.map(item => item.item.name.toLowerCase())) || [];
-    
-    // Filter out excluded items
-    const includedItems = groceryItems.filter(item => !excludedNames.has(item.itemName.toLowerCase()));
-    
-    const itemsText = includedItems
-      .map(item => formatItem(item))
-      .join('\n');
-    
-    const encodedItems = encodeURIComponent(itemsText);
-    const shortcutsURL = `shortcuts://run-shortcut?name=GroceryCheckboxes&input=text&text=${encodedItems}`;
-    
-    window.open(shortcutsURL, '_self');
-  };
-
   return (
     <Card withBorder shadow="sm" padding="lg">
       <Group justify="space-between" align="center" mb="md">
         <Title order={3}>Shopping List</Title>
         <Group gap="xs">
           <SegmentedControl
-            size="xs"
+            size="sm"
             value={sortMode}
             onChange={(value) => setSortMode(value as 'store' | 'alphabetical')}
             data={[
@@ -260,9 +243,6 @@ export function ShoppingList({
               { label: 'A-Z', value: 'alphabetical' }
             ]}
           />
-          <Button size="compact-sm" onClick={() => shareViaShortcuts(sortedItems)}>
-            Share
-          </Button>
         </Group>
       </Group>
       
@@ -271,12 +251,12 @@ export function ShoppingList({
         <Alert icon={<IconAlertCircle size={16} />} color="orange" mb="md">
           <Group justify="space-between" align="flex-start">
             <div>
-              <Text size="sm" fw={500}>Items need positioning</Text>
-              <Text size="xs">
+              <Text size="md" fw={500}>Items need positioning</Text>
+              <Text size="sm">
                 {unpositionedItems.length} item{unpositionedItems.length > 1 ? 's' : ''} don&apos;t have store positions yet
               </Text>
             </div>
-            <Button size="xs" component={Link} href="/store-order">
+            <Button size="sm" component={Link} href="/store-order">
               Set Order
             </Button>
           </Group>
@@ -294,7 +274,7 @@ export function ShoppingList({
             return (
               <Group key={`${item.itemName}-${index}`} justify="space-between" align="flex-start">
                 <Text 
-                  size="sm" 
+                  size="md" 
                   style={{ 
                     flex: 1,
                     textDecoration: isExcluded ? 'line-through' : 'none',
@@ -312,13 +292,13 @@ export function ShoppingList({
                   />
                   {isAdHoc ? (
                     <ActionIcon
-                      size="md"
+                      size="sm"
                       variant="subtle"
                       color="red"
                       onClick={() => handleRemoveAdHocItem(item.itemName)}
                       aria-label={`Remove ${item.itemName}`}
                     >
-                      <IconTrash size={16} />
+                      <IconTrash size={18} />
                     </ActionIcon>
                   ) : (
                     <></>

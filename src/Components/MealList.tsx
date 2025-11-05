@@ -162,6 +162,50 @@ export function MealList({
     })
   }
 
+  // Reusable delete button component
+  function DeleteButton({ onClick }: { onClick: () => void }) {
+    return (
+      <ActionIcon
+        size="sm"
+        variant="subtle"
+        color="red"
+        onClick={onClick}
+      >
+        <IconTrash size={18} />
+      </ActionIcon>
+    )
+  }
+
+  // Reusable add recipe button
+  function AddRecipeButton({ onClick }: { onClick: () => void }) {
+    return (
+      <Button
+        leftSection={<IconPlus size={14} />}
+        variant="light"
+        size="xs"
+        color="green"
+        onClick={onClick}
+      >
+        Add recipe
+      </Button>
+    )
+  }
+
+  // Reusable add item button
+  function AddItemButton({ onClick }: { onClick: () => void }) {
+    return (
+      <Button
+        leftSection={<IconPlus size={14} />}
+        variant="light"
+        size="xs"
+        color="blue"
+        onClick={onClick}
+      >
+        Add item
+      </Button>
+    )
+  }
+
   if (days.length === 0) {
     return (
       <Card withBorder shadow="sm" padding="lg">
@@ -202,10 +246,10 @@ export function MealList({
                     <Stack gap="sm">
                       {/* Date Header */}
                       <div>
-                        <Text size="sm" fw={700}>
+                        <Text size="md" fw={700}>
                           {day.dateObj.toLocaleDateString('en-US', { weekday: 'long' })}
                         </Text>
-                        <Text size="sm" c="dimmed">
+                        <Text size="md" c="dimmed">
                           {day.dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </Text>
                       </div>
@@ -213,67 +257,37 @@ export function MealList({
                       {/* Recipes */}
                       {recipes.map((recipeName, idx) => (
                         <Group key={`recipe-${idx}`} gap="xs" wrap="nowrap" justify="space-between">
-                          <Text size="sm" fw={500}>
+                          <Text size="md" fw={500}>
                             {recipeName}
                           </Text>
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            color="red"
-                            onClick={() => handleRemove(
-                              meal!.id,
-                              'Dinner',
-                              recipes.filter(r => r !== recipeName),
-                              items
-                            )}
-                          >
-                            <IconTrash size={12} />
-                          </ActionIcon>
+                          <DeleteButton onClick={() => handleRemove(
+                            meal!.id,
+                            'Dinner',
+                            recipes.filter(r => r !== recipeName),
+                            items
+                          )} />
                         </Group>
                       ))}
 
                       {/* Items */}
                       {items.map((item, idx) => (
                         <Group key={`item-${idx}`} gap="xs" wrap="nowrap" justify="space-between">
-                          <Text size="sm" c="dimmed">
+                          <Text size="md" c="dimmed">
                             {item.name}{item.amount ? ` (${item.amount})` : ''}
                           </Text>
-                          <ActionIcon
-                            size="sm"
-                            variant="subtle"
-                            color="red"
-                            onClick={() => handleRemove(
-                              meal!.id,
-                              'Dinner',
-                              recipes,
-                              items.filter(i => i.name !== item.name)
-                            )}
-                          >
-                            <IconTrash size={12} />
-                          </ActionIcon>
+                          <DeleteButton onClick={() => handleRemove(
+                            meal!.id,
+                            'Dinner',
+                            recipes,
+                            items.filter(i => i.name !== item.name)
+                          )} />
                         </Group>
                       ))}
 
                       {/* Add buttons */}
                       <Group gap="xs" mt="xs">
-                        <Button
-                          leftSection={<IconPlus size={14} />}
-                          variant="light"
-                          size="xs"
-                          color="green"
-                          onClick={() => setRecipeDialogState({ isOpen: true, day, mealType: 'Dinner' })}
-                        >
-                          Add recipe
-                        </Button>
-                        <Button
-                          leftSection={<IconPlus size={14} />}
-                          variant="light"
-                          size="xs"
-                          color="blue"
-                          onClick={() => setItemDialogState({ isOpen: true, day, mealType: 'Dinner' })}
-                        >
-                          Add item
-                        </Button>
+                        <AddRecipeButton onClick={() => setRecipeDialogState({ isOpen: true, day, mealType: 'Dinner' })} />
+                        <AddItemButton onClick={() => setItemDialogState({ isOpen: true, day, mealType: 'Dinner' })} />
                       </Group>
                     </Stack>
                   </Card>
@@ -289,30 +303,14 @@ export function MealList({
               <Group justify="space-between" align="center">
                 <Title order={4}>Breakfasts, Lunches & Other Meals</Title>
                 <Group gap="xs">
-                  <Button
-                    leftSection={<IconPlus size={14} />}
-                    variant="light"
-                    size="xs"
-                    color="green"
-                    onClick={() => setRecipeDialogState({ isOpen: true, day: null, mealType: 'General' })}
-                  >
-                    Recipe
-                  </Button>
-                  <Button
-                    leftSection={<IconPlus size={14} />}
-                    variant="light"
-                    size="xs"
-                    color="blue"
-                    onClick={() => setItemDialogState({ isOpen: true, day: null, mealType: 'General' })}
-                  >
-                    Item
-                  </Button>
+                  <AddRecipeButton onClick={() => setRecipeDialogState({ isOpen: true, day: null, mealType: 'General' })} />
+                  <AddItemButton onClick={() => setItemDialogState({ isOpen: true, day: null, mealType: 'General' })} />
                 </Group>
               </Group>
 
               <Stack gap="xs">
                 {generalMeals.length === 0 && (
-                  <Text size="sm" c="dimmed">
+                  <Text size="md" c="dimmed">
                     No general meals added yet.
                   </Text>
                 )}
@@ -325,40 +323,26 @@ export function MealList({
                       <Stack gap="xs">
                         {recipes.map((recipeName, idx) => (
                           <Group key={`gr-${idx}`} justify="space-between">
-                            <Text size="sm">{recipeName}</Text>
-                            <ActionIcon
-                              size="sm"
-                              variant="subtle"
-                              color="red"
-                              onClick={() => handleRemove(
-                                meal.id,
-                                'General',
-                                recipes.filter(r => r !== recipeName),
-                                items
-                              )}
-                            >
-                              <IconTrash size={12} />
-                            </ActionIcon>
+                            <Text size="md">{recipeName}</Text>
+                            <DeleteButton onClick={() => handleRemove(
+                              meal.id,
+                              'General',
+                              recipes.filter(r => r !== recipeName),
+                              items
+                            )} />
                           </Group>
                         ))}
                         {items.map((item, idx) => (
                           <Group key={`gi-${idx}`} justify="space-between">
-                            <Text size="sm" c="dimmed">
+                            <Text size="md" c="dimmed">
                               {item.name}{item.amount ? ` (${item.amount})` : ''}
                             </Text>
-                            <ActionIcon
-                              size="sm"
-                              variant="subtle"
-                              color="red"
-                              onClick={() => handleRemove(
-                                meal.id,
-                                'General',
-                                recipes,
-                                items.filter(i => i.name !== item.name)
-                              )}
-                            >
-                              <IconTrash size={12} />
-                            </ActionIcon>
+                            <DeleteButton onClick={() => handleRemove(
+                              meal.id,
+                              'General',
+                              recipes,
+                              items.filter(i => i.name !== item.name)
+                            )} />
                           </Group>
                         ))}
                       </Stack>

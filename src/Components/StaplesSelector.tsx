@@ -20,12 +20,12 @@ export function StaplesSelector({
         {stapleSelections.map((staple: StapleSelectionWithItem) => {
           return (
             <Group key={staple.item_id} justify="space-between" align="center">
-              <Text size="sm" style={{ flex: 1 }}>
+              <Text size="md" style={{ flex: 1 }}>
                 {staple.item.staple_amount ? `${staple.item.name}: ${staple.item.staple_amount}` : staple.item.name}
               </Text>
               <Group gap="xs">
                 <Button
-                  size="xs"
+                  size="sm"
                   variant={staple.status === StapleStatusEnum.INCLUDED ? 'filled' : 'subtle'}
                   color={staple.status === StapleStatusEnum.INCLUDED ? 'green' : 'gray'}
                   onClick={() => onStapleSelection(staple, StapleStatusEnum.INCLUDED)}
@@ -33,7 +33,7 @@ export function StaplesSelector({
                   Include
                 </Button>
                 <Button
-                  size="xs"
+                  size="sm"
                   variant={staple.status === StapleStatusEnum.EXCLUDED ? 'filled' : 'subtle'}
                   color={staple.status === StapleStatusEnum.EXCLUDED ? 'red' : 'gray'}
                   onClick={() => onStapleSelection(staple, StapleStatusEnum.EXCLUDED)}
