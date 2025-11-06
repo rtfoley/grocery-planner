@@ -152,18 +152,18 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
               <IconGripVertical size={20} />
             </ActionIcon>
 
-            <Text size="sm" style={{ flex: 1 }}>
+            <Text style={{ flex: 1 }}>
               <strong>{index + 1}.</strong>&nbsp;{item.name}
             </Text>
 
             <ActionIcon
               color="red"
               variant="subtle"
-              size="md"
+              size="sm"
               onClick={() => removeFromOrder(item.id)}
               aria-label="Remove from route"
             >
-              <IconTrash size={16} />
+              <IconTrash />
             </ActionIcon>
           </Group>
         </Card>
@@ -184,7 +184,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
                 </Group>
                 </Alert>
             )}
-            <Text size="sm" c="dimmed">
+            <Text c="dimmed">
                 Add items to the route, then drag inside the “Store Route Order” list to arrange them.
             </Text>      
         </Grid.Col>
@@ -195,7 +195,7 @@ export function StoreOrderManager({ items }: { items: Item[] }) {
             {unorderedItems.map(item => (
                 <Card withBorder p="sm" key={item.id}>
                     <Group justify="space-between">
-                    <Text size="sm">{item.name}</Text>
+                    <Text>{item.name}</Text>
                     <Button size="xs" onClick={() => addToOrder(item.id)}>
                         Add to Route
                     </Button>
