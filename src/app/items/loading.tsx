@@ -1,5 +1,6 @@
 import { Container, Center, Loader } from '@mantine/core'
 
+// TODO remove?
 export default function Loading() {
   return (
     <Container size="lg" py="xl">

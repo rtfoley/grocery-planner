@@ -18,6 +18,9 @@ interface ItemsManagerProps {
   items: Item[]
 }
 
+// TODO add ability to edit item name
+// TODO add-item form doesn't reset after adding
+// TODO no notifications?
 export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
   // Local state for optimistic updates
   const [items, setItems] = useState<Item[]>(initialItems)

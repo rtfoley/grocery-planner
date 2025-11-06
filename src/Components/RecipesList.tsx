@@ -66,8 +66,8 @@ export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
 
   const rows = recipes.map((recipe) => (
     <tr key={recipe.id}>
-      <td>{recipe.name}</td>
-      <td style={{ textAlign: 'center' }}>{recipe.recipe_items.length} ingredients</td>
+      <td><Text>{recipe.name}</Text></td>
+      <td style={{ textAlign: 'center' }}><Text>{recipe.recipe_items.length} ingredients</Text></td>
       <td style={{ textAlign: 'right' }}>
         <Group gap="xs" justify="flex-end">
           <ActionIcon
@@ -75,19 +75,19 @@ export function RecipesList({ recipes: initialRecipes }: RecipesListProps) {
             href={`/recipes/${recipe.id}`}
             variant="subtle"
             color="blue"
-            size="md"
+            size="sm"
             aria-label="Edit recipe"
           >
-            <IconEdit size={16} />
+            <IconEdit />
           </ActionIcon>
           <ActionIcon
             variant="subtle"
             color="red"
-            size="md"
+            size="sm"
             onClick={() => handleDeleteClick(recipe)}
             aria-label={`Delete ${recipe.name}`}
           >
-            <IconTrash size={16} />
+            <IconTrash />
           </ActionIcon>
         </Group>
       </td>
