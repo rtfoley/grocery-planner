@@ -99,19 +99,19 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
     if (!sessionId) return
 
     // Optimistic update
-    const item = Array.from(neededItems.entries()).find(([id]) => id === itemId)?.[1]
+    const itemData = Array.from(neededItems.entries()).find(([id]) => id === itemId)?.[1]
     setShoppingListItems(prev => {
       const existing = prev.find(si => si.item_id === itemId)
 
       if (existing) {
         // Update existing item
         return prev.map(si => si.item_id === itemId ? { ...si, checked } : si)
-      } else if (item) {
+      } else if (itemData) {
         // Add new item
         return [...prev, {
           planning_session_id: sessionId,
           item_id: itemId,
-          item,
+          item: itemData.item,
           checked,
           id: '',
           created_at: new Date().toISOString(),
@@ -140,32 +140,47 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
     }
   }
 
-  // Calculate all needed items (excluding exclusions)
+  // Calculate all needed items with amounts (excluding exclusions)
   const neededItems = useMemo(() => {
-    const itemMap = new Map<string, Item>()
+    const itemMap = new Map<string, { item: Item; amounts: string[] }>()
+
+    // Helper function to add or update an item in the map
+    const addItemToMap = (itemId: string, item: Item, amount?: string | null) => {
+      const existing = itemMap.get(itemId)
+      if (existing) {
+        if (amount) {
+          existing.amounts.push(amount)
+        }
+      } else {
+        itemMap.set(itemId, {
+          item,
+          amounts: amount ? [amount] : []
+        })
+      }
+    }
 
     // Add items from meals (recipes + individual meal items)
     meals.forEach(meal => {
       meal.meal_recipes?.forEach(mr => {
         mr.recipe.recipe_items?.forEach(ri => {
-          itemMap.set(ri.item.id, ri.item)
+          addItemToMap(ri.item.id, ri.item, ri.amount)
         })
       })
       meal.meal_items?.forEach(mi => {
-        itemMap.set(mi.item.id, mi.item)
+        addItemToMap(mi.item.id, mi.item, mi.amount)
       })
     })
 
     // Add included staples
     staples.forEach(staple => {
       if (staple.status === 'INCLUDED') {
-        itemMap.set(staple.item_id, staple.item)
+        addItemToMap(staple.item_id, staple.item, staple.item.staple_amount)
       }
     })
 
     // Add adhoc items
     adhocItems.forEach(adhoc => {
-      itemMap.set(adhoc.item_id, adhoc.item)
+      addItemToMap(adhoc.item_id, adhoc.item, adhoc.amount)
     })
 
     // Filter out excluded items
@@ -177,12 +192,13 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
 
   // Merge needed items with persisted checked state
   const mergedItems = useMemo(() => {
-    const items = Array.from(neededItems.entries()).map(([itemId, item]) => {
+    const items = Array.from(neededItems.entries()).map(([itemId, itemData]) => {
       // Find if this item exists in shopping_list_items (persisted state)
       const persistedItem = shoppingListItems.find(si => si.item_id === itemId)
 
       return {
-        item,
+        item: itemData.item,
+        amounts: itemData.amounts,
         item_id: itemId,
         checked: persistedItem?.checked || false
       }
@@ -194,6 +210,7 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
       if (!neededItems.has(si.item_id)) {
         items.push({
           item: si.item,
+          amounts: [],
           item_id: si.item_id,
           checked: si.checked
         })
@@ -292,18 +309,21 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
                   {showPurchased ? 'No items' : 'All items checked!'}
                 </Text>
               ) : (
-                displayItems.map(({ item, item_id, checked }) => (
-                  <Checkbox
-                    key={item_id}
-                    label={item.name}
-                    checked={checked}
-                    onChange={(e) => handleToggleItem(item_id, e.currentTarget.checked)}
-                    styles={{
-                      root: { padding: '0.5rem' },
-                      label: { fontSize: '1.1rem', cursor: 'pointer' }
-                    }}
-                  />
-                ))
+                displayItems.map(({ item, item_id, checked, amounts }) => {
+                  const amountText = amounts.length > 0 ? `: ${amounts.join(', ')}` : ''
+                  return (
+                    <Checkbox
+                      key={item_id}
+                      label={`${item.name}${amountText}`}
+                      checked={checked}
+                      onChange={(e) => handleToggleItem(item_id, e.currentTarget.checked)}
+                      styles={{
+                        root: { padding: '0.5rem' },
+                        label: { fontSize: '1.1rem', cursor: 'pointer' }
+                      }}
+                    />
+                  )
+                })
               )}
             </Stack>
           </Card>
