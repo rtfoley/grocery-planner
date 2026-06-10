@@ -20,8 +20,7 @@ export function Navigation() {
   const navItems = [
     { href: '/', label: 'Home' },
     { href: '/recipes', label: 'Recipes' },
-    { href: '/items', label: 'Items' },
-    { href: '/store-order', label: 'Store Order' }
+    { href: '/items', label: 'Items' }
   ]
 
   useEffect(() => {

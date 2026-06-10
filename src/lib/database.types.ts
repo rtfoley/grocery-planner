@@ -79,6 +79,7 @@ export type Database = {
       }
       items: {
         Row: {
+          aisle_number: number | null
           id: string
           is_staple: boolean
           name: string
@@ -87,6 +88,7 @@ export type Database = {
           store_order_index: number | null
         }
         Insert: {
+          aisle_number?: number | null
           id?: string
           is_staple?: boolean
           name: string
@@ -95,6 +97,7 @@ export type Database = {
           store_order_index?: number | null
         }
         Update: {
+          aisle_number?: number | null
           id?: string
           is_staple?: boolean
           name?: string

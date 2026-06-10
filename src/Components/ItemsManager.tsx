@@ -1,14 +1,15 @@
 // src/Components/ItemsManager.tsx
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Table, Checkbox, TextInput, Button, Group, ActionIcon, Text, Stack, Card, SegmentedControl } from '@mantine/core'
 import { IconEdit, IconCheck, IconX, IconPlus } from '@tabler/icons-react'
-import { updateItemStapleStatus, createItem } from '@/lib/actions'
+import { updateItemAisle, updateItemStapleStatus, createItem } from '@/lib/actions'
 import { useMediaQuery } from '@mantine/hooks'
 
 interface Item {
   id: string
+  aisle_number: number | null
   name: string
   is_staple: boolean
   staple_amount: string | null
@@ -24,7 +25,9 @@ interface ItemsManagerProps {
 export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
   // Local state for optimistic updates
   const [items, setItems] = useState<Item[]>(initialItems)
+  const [savedAisles, setSavedAisles] = useState(() => new Map(initialItems.map(item => [item.id, item.aisle_number])))
   const [filter, setFilter] = useState<string>('all')
+  const [sortMode, setSortMode] = useState<'name' | 'aisle'>('name')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editAmount, setEditAmount] = useState('')
   const [loading, setLoading] = useState<string | null>(null)
@@ -38,14 +41,39 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
   // Use horizontal layout on medium+ screens, vertical on mobile
   const isLargeScreen = useMediaQuery('(min-width: 768px)')
 
+  useEffect(() => {
+    setItems(initialItems)
+    setSavedAisles(new Map(initialItems.map(item => [item.id, item.aisle_number])))
+  }, [initialItems])
+
   // Filter items based on selection
   const filteredItems = useMemo(() => {
-    const sorted = [...items].sort((a, b) => a.name.localeCompare(b.name))
-    
-    if (filter === 'staples') {
-      return sorted.filter(item => item.is_staple)
-    }
-    return sorted
+    const filtered = filter === 'staples'
+      ? items.filter(item => item.is_staple)
+      : items
+
+    return [...filtered].sort((a, b) => {
+      if (sortMode === 'name') {
+        return a.name.localeCompare(b.name)
+      }
+
+      if (a.aisle_number == null && b.aisle_number == null) {
+        return a.name.localeCompare(b.name)
+      }
+      if (a.aisle_number == null) return 1
+      if (b.aisle_number == null) return -1
+
+      const aisleCompare = a.aisle_number - b.aisle_number
+      return aisleCompare !== 0 ? aisleCompare : a.name.localeCompare(b.name)
+    })
+  }, [items, filter, sortMode])
+
+  const unassignedAisleCount = useMemo(() => {
+    const filtered = filter === 'staples'
+      ? items.filter(item => item.is_staple)
+      : items
+
+    return filtered.filter(item => item.aisle_number == null).length
   }, [items, filter])
 
   const handleStapleToggle = async (item: Item) => {
@@ -128,12 +156,41 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
     if (result.success && result.item) {
       // Add new item to the list
       setItems(prev => [...prev, result.item])
+      setSavedAisles(prev => new Map(prev).set(result.item.id, result.item.aisle_number))
       setNewItemName('')
       setNewItemAmount('')
       setNewItemIsStaple(true)
     }
 
     setCreatingItem(false)
+  }
+
+  const handleAisleChange = (id: string, value: string) => {
+    const normalizedValue = value.replace(/\D/g, '')
+    const aisleNumber = normalizedValue === '' ? null : Number(normalizedValue)
+
+    setItems(prev => prev.map(item =>
+      item.id === id
+        ? { ...item, aisle_number: aisleNumber }
+        : item
+    ))
+  }
+
+  const handleSaveAisle = async (item: Item) => {
+    if (savedAisles.get(item.id) === item.aisle_number) return
+
+    setLoading(`aisle-${item.id}`)
+
+    const result = await updateItemAisle(item.id, item.aisle_number)
+
+    if (result.success && result.item) {
+      setItems(prev => prev.map(i =>
+        i.id === item.id ? result.item : i
+      ))
+      setSavedAisles(prev => new Map(prev).set(item.id, result.item.aisle_number))
+    }
+
+    setLoading(null)
   }
 
   const stapleCount = items.filter(item => item.is_staple).length
@@ -218,15 +275,35 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
             { label: `Staples Only (${stapleCount})`, value: 'staples' }
           ]}
         />
+        <Group gap="xs">
+          <Text size="sm" c="dimmed">
+            Sort by
+          </Text>
+          <SegmentedControl
+            value={sortMode}
+            onChange={(value) => setSortMode(value as 'name' | 'aisle')}
+            data={[
+              { label: 'Name', value: 'name' },
+              { label: 'Aisle', value: 'aisle' }
+            ]}
+          />
+        </Group>
       </Group>
+
+      {sortMode === 'aisle' && unassignedAisleCount > 0 && (
+        <Text size="sm" c="dimmed">
+          {unassignedAisleCount} item{unassignedAisleCount === 1 ? '' : 's'} without aisle numbers appear at the bottom.
+        </Text>
+      )}
 
       {/* Items Table */}
       <Table>
         <thead>
           <tr>
-            <th style={{ width: '40%' }}>Name</th>
-            <th style={{ width: '30%', }}>Default Amount</th>
-            <th style={{ width: '15%', }}>Staple</th>
+            <th style={{ width: '35%' }}>Name</th>
+            <th style={{ width: '25%', }}>Default Amount</th>
+            <th style={{ width: '15%' }}>Aisle</th>
+            <th style={{ width: '10%', }}>Staple</th>
             <th style={{ width: '15%', }}>Actions</th>
           </tr>
         </thead>
@@ -251,6 +328,20 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
                     {item.staple_amount || (item.is_staple ? 'No default amount' : '—')}
                   </Text>
                 )}
+              </td>
+              <td>
+                <TextInput
+                  aria-label={`Aisle number for ${item.name}`}
+                  placeholder="—"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={item.aisle_number?.toString() ?? ''}
+                  onChange={(event) => handleAisleChange(item.id, event.currentTarget.value)}
+                  onBlur={() => handleSaveAisle(item)}
+                  disabled={loading === `aisle-${item.id}`}
+                  size="sm"
+                  styles={{ input: { textAlign: 'center' } }}
+                />
               </td>
               <td>
                 <Group justify="center">

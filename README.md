@@ -8,7 +8,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - Storing recipes with ingredients and amounts
 - Planning meals for 1-2 weeks on specific dates
 - Automatically generating shopping lists with ingredient counts
-- Managing staple items and store ordering preferences
+- Managing staple items and aisle number preferences
 
 ## Tech Stack
 
@@ -32,7 +32,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 ## Data Model
 
 ### Core Entities
-- **Item:** Grocery items with optional staple status and store ordering
+- **Item:** Grocery items with optional staple status and aisle number
 - **Recipe:** Named collections of ingredients with amounts
 - **PlanningSession:** 14-day meal planning periods with start date
 - **MealAssignment:** Links specific recipes to specific dates
@@ -47,7 +47,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - `/recipes` - Recipe management (CRUD)
 - `/recipes/new` - Add new recipe
 - `/recipes/[id]` - Edit existing recipe
-- `/store-order` - Drag-and-drop item ordering for shopping route
+- `/items` - Item, staple, default amount, and aisle number management
 - `/staples` - Master staples list management
 
 ### Key Features
@@ -55,7 +55,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - **Item Autocomplete:** Smart ingredient entry with create-new capability
 - **Flexible Planning:** 14 consecutive days starting from chosen date
 - **Amount Concatenation:** "flour: 1 cup, 2 tbsp (+ 1 other recipe)"
-- **Store Ordering:** Custom item sequence matching shopping route
+- **Aisle Ordering:** Sort shopping lists by each item's aisle number
 - **Responsive Design:** Works on phones, tablets, and desktop
 
 ## Development Slices
@@ -84,12 +84,11 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] In-memory staples selection for shopping lists
 - [x] Three-state staples workflow (pending/included/excluded)
 
-### Slice 4: Store Ordering ✅ COMPLETE
-- [x] Add store_order_index to Item table
-- [x] Store ordering interface (`/store-order`)
-- [x] Drag-and-drop item reordering
-- [x] Shopping list display in custom store order
-- [x] Warning for unpositioned items
+### Slice 4: Aisle Ordering ✅ COMPLETE
+- [x] Add aisle_number to Item table
+- [x] Aisle management in the items table (`/items`)
+- [x] Shopping list display by aisle number
+- [x] Warning for items missing aisle numbers
 
 ### Slice 5: Full Persistence ✅ COMPLETE
 - [x] Add PlanningSession, MealAssignment, AdHocItem tables
@@ -126,7 +125,7 @@ Streamlines the process of planning meals and generating grocery lists by:
 - [x] **UI/UX Quick Wins**
   - [x] Toast notifications for user actions (recipe saved, item added, etc.)
   - [x] Loading spinners for async operations
-  - [x] Drag handles for better affordance in store ordering
+  - [x] Clear affordance for editing aisle numbers
   - [x] Confirmation tooltips for destructive actions
   - [x] Visual spacing improvements (card elevation, section dividers)
   - [x] Icon and color consistency across app
@@ -233,7 +232,7 @@ See `supabase.sql` for the complete data model. Key relationships:
 2. **Plan Meals:** Select start date, assign recipes to specific days (14-day span)
 3. **Review Shopping List:** Auto-generated list shows ingredient counts and amounts
 4. **Manage Staples:** Configure standard items to check each shopping trip
-5. **Order Items:** Arrange items to match your typical store shopping route
+5. **Assign Aisles:** Add aisle numbers so the shopping list follows your store layout
 6. **Exclude Items:** Skip items you already have at home
 
 ## Design Philosophy

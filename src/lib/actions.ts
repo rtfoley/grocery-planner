@@ -96,8 +96,8 @@ export async function updateItemStapleStatus(id: string, is_staple: boolean, sta
   }
 }
 
-// Store ordering actions
-export async function updateItemOrder(itemId: string, orderIndex: number) {
+// Store aisle actions
+export async function updateItemAisle(itemId: string, aisleNumber: number | null) {
   const groupId = await getUserGroupId()
   if (!groupId) return { success: false, error: 'Not authenticated' }
 
@@ -106,7 +106,7 @@ export async function updateItemOrder(itemId: string, orderIndex: number) {
   try {
     const { data: item, error } = await supabase
       .from('items')
-      .update({ store_order_index: orderIndex })
+      .update({ aisle_number: aisleNumber })
       .eq('id', itemId)
       .eq('shopping_group_id', groupId)
       .select()
@@ -114,36 +114,13 @@ export async function updateItemOrder(itemId: string, orderIndex: number) {
 
     if (error) throw error
 
-    revalidatePath('/store-order')
+    revalidatePath('/items')
+    revalidatePath('/')
+    revalidatePath('/shopping')
     return { success: true, item }
   } catch (error) {
-    logError(error, { action: 'updateItemOrder', itemId, orderIndex, groupId })
-    return { success: false, error: 'Failed to update item order' }
-  }
-}
-
-export async function updateMultipleItemOrders(updates: Array<{ id: string, orderIndex: number | null }>) {
-  const groupId = await getUserGroupId()
-  if (!groupId) return { success: false, error: 'Not authenticated' }
-
-  const supabase = await createClient()
-
-  try {
-    await Promise.all(
-      updates.map(({ id, orderIndex }) =>
-        supabase
-          .from('items')
-          .update({ store_order_index: orderIndex })
-          .eq('id', id)
-          .eq('shopping_group_id', groupId)
-      )
-    )
-
-    revalidatePath('/store-order')
-    return { success: true }
-  } catch (error) {
-    logError(error, { action: 'updateMultipleItemOrders', updateCount: updates.length, groupId })
-    return { success: false, error: 'Failed to update item orders' }
+    logError(error, { action: 'updateItemAisle', itemId, aisleNumber, groupId })
+    return { success: false, error: 'Failed to update item aisle' }
   }
 }
 
@@ -973,4 +950,3 @@ export async function toggleShoppingListItem(
   // Don't revalidate - client component handles optimistic updates
   return data
 }
-

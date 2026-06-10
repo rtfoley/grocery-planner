@@ -38,6 +38,7 @@ CREATE TABLE items (
   name TEXT NOT NULL,
   is_staple BOOLEAN NOT NULL DEFAULT FALSE,
   staple_amount TEXT,
+  aisle_number INTEGER,
   store_order_index INTEGER,
   UNIQUE (shopping_group_id, name)
 );
@@ -136,6 +137,7 @@ CREATE INDEX idx_shopping_group_members_group ON shopping_group_members(shopping
 CREATE INDEX idx_pending_invitations_email ON pending_invitations(invited_email);
 CREATE INDEX idx_pending_invitations_group ON pending_invitations(shopping_group_id);
 CREATE INDEX idx_items_shopping_group ON items(shopping_group_id);
+CREATE INDEX idx_items_shopping_group_aisle ON items(shopping_group_id, aisle_number, name);
 CREATE INDEX idx_recipes_shopping_group ON recipes(shopping_group_id);
 CREATE INDEX idx_planning_sessions_shopping_group ON planning_sessions(shopping_group_id);
 CREATE INDEX idx_meals_session ON meals(planning_session_id);
