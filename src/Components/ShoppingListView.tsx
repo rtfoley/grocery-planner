@@ -42,7 +42,7 @@ interface ShoppingListViewProps {
   sessionId: string | null
 }
 
-type SortMode = 'alphabetical' | 'store-order'
+type SortMode = 'alphabetical' | 'aisle'
 
 export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps) {
   const [shoppingListItems, setShoppingListItems] = useState<ShoppingListItemWithItem[]>([])
@@ -51,7 +51,7 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
   const [exclusions, setExclusions] = useState<ItemExclusionWithItem[]>([])
   const [adhocItems, setAdhocItems] = useState<AdhocItemWithItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [sortMode, setSortMode] = useState<SortMode>('store-order')
+  const [sortMode, setSortMode] = useState<SortMode>('aisle')
   const [showPurchased, setShowPurchased] = useState(false)
   const [newItemName, setNewItemName] = useState('')
 
@@ -230,10 +230,18 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
       if (sortMode === 'alphabetical') {
         return a.item.name.localeCompare(b.item.name)
       } else {
-        // Store order
-        const aOrder = a.item.store_order_index ?? 999999
-        const bOrder = b.item.store_order_index ?? 999999
-        return aOrder - bOrder
+        // Aisle order: unassigned aisle numbers go last.
+        const aAisle = a.item.aisle_number
+        const bAisle = b.item.aisle_number
+
+        if (aAisle == null && bAisle == null) {
+          return a.item.name.localeCompare(b.item.name)
+        }
+        if (aAisle == null) return 1
+        if (bAisle == null) return -1
+
+        const aisleCompare = aAisle - bAisle
+        return aisleCompare !== 0 ? aisleCompare : a.item.name.localeCompare(b.item.name)
       }
     })
 
@@ -288,7 +296,7 @@ export function ShoppingListView({ sessions, sessionId }: ShoppingListViewProps)
                 onChange={(value) => setSortMode(value as SortMode)}
                 data={[
                   { label: 'A-Z', value: 'alphabetical' },
-                  { label: 'Store Order', value: 'store-order' }
+                  { label: 'Aisle', value: 'aisle' }
                 ]}
               />
               <Button

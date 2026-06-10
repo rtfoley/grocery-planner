@@ -29,7 +29,7 @@ interface ShoppingItem {
   isAdHoc?: boolean
   isSide?: boolean
   isStaple?: boolean
-  orderIndex?: number | null
+  aisleNumber?: number | null
 }
 
 export function ShoppingList({
@@ -49,9 +49,9 @@ export function ShoppingList({
   const [newItemAmount, setNewItemAmount] = useState('')
   const [sortMode, setSortMode] = useState<'store' | 'alphabetical'>('store')
 
-  // Create lookup map for store ordering
-  const orderLookup = useMemo(() => {
-    return new Map(allItems.map(item => [item.name, item.store_order_index]))
+  // Create lookup map for aisle ordering
+  const aisleLookup = useMemo(() => {
+    return new Map(allItems.map(item => [item.name, item.aisle_number]))
   }, [allItems])
 
   // Process recipe items into shopping list format
@@ -73,14 +73,14 @@ export function ShoppingList({
             itemName,
             amounts: recipeItem.amount ? [recipeItem.amount] : [],
             recipeCount: 1,
-            orderIndex: orderLookup.get(itemName)
+            aisleNumber: aisleLookup.get(itemName)
           })
         }
       })
     })
 
     return Array.from(itemMap.values())
-  }, [recipes, orderLookup])
+  }, [recipes, aisleLookup])
 
   // Combine recipe items, ad-hoc items, meal side items, and selected staples for display
   const allShoppingItems = useMemo(() => {
@@ -96,7 +96,7 @@ export function ShoppingList({
         amounts: staple.item.staple_amount ? [staple.item.staple_amount] : [],
         recipeCount: 0, // Indicates this is a staple
         isStaple: true,
-        orderIndex: orderLookup.get(staple.item.name)
+        aisleNumber: aisleLookup.get(staple.item.name)
       }))
 
       items.forEach((item) => {
@@ -117,7 +117,7 @@ export function ShoppingList({
       amounts: mealItem.amount ? [mealItem.amount] : [],
       recipeCount: 0, // Indicates this is a meal item
       isSide: true,
-      orderIndex: orderLookup.get(mealItem.item.name)
+      aisleNumber: aisleLookup.get(mealItem.item.name)
     }))
 
     items.forEach((item) => {
@@ -136,11 +136,11 @@ export function ShoppingList({
       amounts: adhocItem.amount ? [adhocItem.amount] : [],
       recipeCount: 0, // Indicates this is ad-hoc
       isAdHoc: true,
-      orderIndex: orderLookup.get(adhocItem.item.name)
+      aisleNumber: aisleLookup.get(adhocItem.item.name)
     }))
 
     return [...items, ...adHocDisplayItems]
-  }, [recipeShoppingItems, stapleSelections, meals, adHocItems, orderLookup])
+  }, [recipeShoppingItems, stapleSelections, meals, adHocItems, aisleLookup])
 
   // Sort items based on selected mode
   const sortedItems = useMemo(() => {
@@ -148,21 +148,24 @@ export function ShoppingList({
       return [...allShoppingItems].sort((a, b) => a.itemName.localeCompare(b.itemName))
     }
 
-    // Store order mode
-    const orderedItems = allShoppingItems
-      .filter(item => item.orderIndex !== null && item.orderIndex !== undefined)
-      .sort((a, b) => (a.orderIndex || 0) - (b.orderIndex || 0))
+    // Aisle mode: assigned aisles first, then item name within each aisle.
+    const assignedAisleItems = allShoppingItems
+      .filter(item => item.aisleNumber !== null && item.aisleNumber !== undefined)
+      .sort((a, b) => {
+        const aisleCompare = (a.aisleNumber || 0) - (b.aisleNumber || 0)
+        return aisleCompare !== 0 ? aisleCompare : a.itemName.localeCompare(b.itemName)
+      })
     
-    const unorderedItems = allShoppingItems
-      .filter(item => item.orderIndex === null || item.orderIndex === undefined)
+    const unassignedAisleItems = allShoppingItems
+      .filter(item => item.aisleNumber === null || item.aisleNumber === undefined)
       .sort((a, b) => a.itemName.localeCompare(b.itemName))
 
-    return [...orderedItems, ...unorderedItems]
+    return [...assignedAisleItems, ...unassignedAisleItems]
   }, [allShoppingItems, sortMode])
 
-  // Check for unpositioned items (only relevant for store order mode)
-  const unpositionedItems = sortedItems.filter(item => 
-    item.orderIndex === null || item.orderIndex === undefined
+  // Check for items missing aisle numbers (only relevant for aisle mode)
+  const itemsMissingAisles = sortedItems.filter(item => 
+    item.aisleNumber === null || item.aisleNumber === undefined
   )
 
   // Format item display text
@@ -239,25 +242,25 @@ export function ShoppingList({
             value={sortMode}
             onChange={(value) => setSortMode(value as 'store' | 'alphabetical')}
             data={[
-              { label: 'Store Order', value: 'store' },
+              { label: 'Aisle', value: 'store' },
               { label: 'A-Z', value: 'alphabetical' }
             ]}
           />
         </Group>
       </Group>
       
-      {/* Warning for unpositioned items (only show in store order mode) */}
-      {sortMode === 'store' && unpositionedItems.length > 0 && (
+      {/* Warning for items missing aisles (only show in aisle mode) */}
+      {sortMode === 'store' && itemsMissingAisles.length > 0 && (
         <Alert icon={<IconAlertCircle size={16} />} color="orange" mb="md">
           <Group justify="space-between" align="flex-start">
             <div>
-              <Text size="md" fw={500}>Items need positioning</Text>
+              <Text size="md" fw={500}>Items need aisle numbers</Text>
               <Text size="sm">
-                {unpositionedItems.length} item{unpositionedItems.length > 1 ? 's' : ''} don&apos;t have store positions yet
+                {itemsMissingAisles.length} item{itemsMissingAisles.length > 1 ? 's' : ''} don&apos;t have aisle numbers yet
               </Text>
             </div>
-            <Button size="sm" component={Link} href="/store-order">
-              Set Order
+            <Button size="sm" component={Link} href="/items">
+              Set Aisles
             </Button>
           </Group>
         </Alert>
