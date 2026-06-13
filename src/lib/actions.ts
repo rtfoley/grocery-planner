@@ -124,6 +124,46 @@ export async function updateItemAisle(itemId: string, aisleNumber: number | null
   }
 }
 
+export async function updateItem(
+  id: string,
+  updates: {
+    name?: string
+    is_staple?: boolean
+    staple_amount?: string | null
+    aisle_number?: number | null
+  }
+) {
+  const groupId = await getUserGroupId()
+  if (!groupId) return { success: false, error: 'Not authenticated' }
+
+  const supabase = await createClient()
+
+  try {
+    // Normalize name if provided
+    const normalizedUpdates = {
+      ...updates,
+      name: updates.name ? updates.name.toLowerCase().trim() : undefined,
+      staple_amount: updates.is_staple === false ? null : updates.staple_amount
+    }
+
+    const { data: item, error } = await supabase
+      .from('items')
+      .update(normalizedUpdates)
+      .eq('id', id)
+      .eq('shopping_group_id', groupId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    revalidatePath('/items')
+    return { success: true, item }
+  } catch (error) {
+    logError(error, { action: 'updateItem', itemId: id, groupId })
+    return { success: false, error: 'Failed to update item' }
+  }
+}
+
 // Recipe actions
 export async function createRecipe(name: string, ingredients: Array<{ item: string, amount?: string }>) {
   const groupId = await getUserGroupId()

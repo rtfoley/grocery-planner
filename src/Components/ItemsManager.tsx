@@ -1,11 +1,11 @@
-// src/Components/ItemsManager.tsx
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { Table, Checkbox, TextInput, Button, Group, ActionIcon, Text, Stack, Card, SegmentedControl } from '@mantine/core'
-import { IconEdit, IconCheck, IconX, IconPlus } from '@tabler/icons-react'
-import { updateItemAisle, updateItemStapleStatus, createItem } from '@/lib/actions'
+import { Table, Checkbox, TextInput, Button, Group, Text, Stack, Card, SegmentedControl, Modal } from '@mantine/core'
+import { IconPlus } from '@tabler/icons-react'
+import { updateItem, updateItemStapleStatus, createItem } from '@/lib/actions'
 import { useMediaQuery } from '@mantine/hooks'
+import { notifications } from '@mantine/notifications'
 
 interface Item {
   id: string
@@ -19,18 +19,10 @@ interface ItemsManagerProps {
   items: Item[]
 }
 
-// TODO add ability to edit item name
-// TODO add-item form doesn't reset after adding
-// TODO no notifications?
 export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
-  // Local state for optimistic updates
   const [items, setItems] = useState<Item[]>(initialItems)
-  const [savedAisles, setSavedAisles] = useState(() => new Map(initialItems.map(item => [item.id, item.aisle_number])))
   const [filter, setFilter] = useState<string>('all')
   const [sortMode, setSortMode] = useState<'name' | 'aisle'>('name')
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [editAmount, setEditAmount] = useState('')
-  const [loading, setLoading] = useState<string | null>(null)
 
   // New item form
   const [newItemName, setNewItemName] = useState('')
@@ -38,15 +30,20 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
   const [newItemIsStaple, setNewItemIsStaple] = useState(true)
   const [creatingItem, setCreatingItem] = useState(false)
 
-  // Use horizontal layout on medium+ screens, vertical on mobile
+  // Edit modal
+  const [editingItem, setEditingItem] = useState<Item | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editAisle, setEditAisle] = useState<number | ''>('')
+  const [editIsStaple, setEditIsStaple] = useState(false)
+  const [editAmount, setEditAmount] = useState('')
+  const [saving, setSaving] = useState(false)
+
   const isLargeScreen = useMediaQuery('(min-width: 768px)')
 
   useEffect(() => {
     setItems(initialItems)
-    setSavedAisles(new Map(initialItems.map(item => [item.id, item.aisle_number])))
   }, [initialItems])
 
-  // Filter items based on selection
   const filteredItems = useMemo(() => {
     const filtered = filter === 'staples'
       ? items.filter(item => item.is_staple)
@@ -56,95 +53,78 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
       if (sortMode === 'name') {
         return a.name.localeCompare(b.name)
       }
-
-      if (a.aisle_number == null && b.aisle_number == null) {
-        return a.name.localeCompare(b.name)
-      }
+      if (a.aisle_number == null && b.aisle_number == null) return a.name.localeCompare(b.name)
       if (a.aisle_number == null) return 1
       if (b.aisle_number == null) return -1
-
       const aisleCompare = a.aisle_number - b.aisle_number
       return aisleCompare !== 0 ? aisleCompare : a.name.localeCompare(b.name)
     })
   }, [items, filter, sortMode])
 
   const unassignedAisleCount = useMemo(() => {
-    const filtered = filter === 'staples'
-      ? items.filter(item => item.is_staple)
-      : items
-
-    return filtered.filter(item => item.aisle_number == null).length
+    const filtered = filter === 'staples' ? items.filter(i => i.is_staple) : items
+    return filtered.filter(i => i.aisle_number == null).length
   }, [items, filter])
 
+  const stapleCount = items.filter(i => i.is_staple).length
+
+  const openEditModal = (item: Item) => {
+    setEditingItem(item)
+    setEditName(item.name)
+    setEditAisle(item.aisle_number ?? '')
+    setEditIsStaple(item.is_staple)
+    setEditAmount(item.staple_amount ?? '')
+  }
+
+  const closeEditModal = () => {
+    setEditingItem(null)
+    setEditName('')
+    setEditAisle('')
+    setEditIsStaple(false)
+    setEditAmount('')
+  }
+
+  const handleSaveItem = async () => {
+    if (!editingItem || !editName.trim()) return
+    setSaving(true)
+
+    const result = await updateItem(editingItem.id, {
+      name: editName.trim(),
+      aisle_number: editAisle === '' ? null : Number(editAisle),
+      is_staple: editIsStaple,
+      staple_amount: editIsStaple ? editAmount.trim() || null : null
+    })
+
+    if (result.success && result.item) {
+      setItems(prev => prev.map(i => i.id === editingItem.id ? result.item : i))
+      notifications.show({ title: 'Saved', message: `${result.item.name} updated`, color: 'green' })
+      closeEditModal()
+    } else {
+      notifications.show({ title: 'Error', message: result.error || 'Failed to save item', color: 'red' })
+    }
+
+    setSaving(false)
+  }
+
   const handleStapleToggle = async (item: Item) => {
-    setLoading(item.id)
-
-    // Optimistic update
     const newIsStaple = !item.is_staple
-    setItems(prev => prev.map(i =>
-      i.id === item.id
-        ? { ...i, is_staple: newIsStaple }
-        : i
-    ))
-
-    const result = await updateItemStapleStatus(
-      item.id,
-      newIsStaple,
-      newIsStaple ? item.staple_amount || undefined : undefined
-    )
-
-    // Update with server response if available
-    if (result.success && result.item) {
-      setItems(prev => prev.map(i =>
-        i.id === item.id ? result.item : i
-      ))
-    }
-
-    setLoading(null)
-  }
-
-  const handleEditAmount = (item: Item) => {
-    setEditingId(item.id)
-    setEditAmount(item.staple_amount || '')
-  }
-
-  const handleSaveAmount = async (item: Item) => {
-    setLoading(item.id)
 
     // Optimistic update
-    const newAmount = editAmount.trim() || null
-    setItems(prev => prev.map(i =>
-      i.id === item.id
-        ? { ...i, staple_amount: newAmount }
-        : i
-    ))
+    setItems(prev => prev.map(i => i.id === item.id ? { ...i, is_staple: newIsStaple } : i))
 
-    const result = await updateItemStapleStatus(
-      item.id,
-      true,
-      newAmount || undefined
-    )
+    const result = await updateItemStapleStatus(item.id, newIsStaple, newIsStaple ? item.staple_amount || undefined : undefined)
 
-    // Update with server response if available
     if (result.success && result.item) {
-      setItems(prev => prev.map(i =>
-        i.id === item.id ? result.item : i
-      ))
+      setItems(prev => prev.map(i => i.id === item.id ? result.item : i))
+    } else {
+      // Revert on failure
+      setItems(prev => prev.map(i => i.id === item.id ? item : i))
+      notifications.show({ title: 'Error', message: 'Failed to update staple status', color: 'red' })
     }
-
-    setEditingId(null)
-    setEditAmount('')
-    setLoading(null)
-  }
-
-  const handleCancelEdit = () => {
-    setEditingId(null)
-    setEditAmount('')
   }
 
   const handleCreateItem = async () => {
     if (!newItemName.trim()) return
-
     setCreatingItem(true)
 
     const result = await createItem(
@@ -154,49 +134,65 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
     )
 
     if (result.success && result.item) {
-      // Add new item to the list
       setItems(prev => [...prev, result.item])
-      setSavedAisles(prev => new Map(prev).set(result.item.id, result.item.aisle_number))
       setNewItemName('')
       setNewItemAmount('')
       setNewItemIsStaple(true)
+      notifications.show({ title: 'Added', message: `${result.item.name} created`, color: 'green' })
+    } else {
+      notifications.show({ title: 'Error', message: result.error || 'Failed to create item', color: 'red' })
     }
 
     setCreatingItem(false)
   }
 
-  const handleAisleChange = (id: string, value: string) => {
-    const normalizedValue = value.replace(/\D/g, '')
-    const aisleNumber = normalizedValue === '' ? null : Number(normalizedValue)
-
-    setItems(prev => prev.map(item =>
-      item.id === id
-        ? { ...item, aisle_number: aisleNumber }
-        : item
-    ))
-  }
-
-  const handleSaveAisle = async (item: Item) => {
-    if (savedAisles.get(item.id) === item.aisle_number) return
-
-    setLoading(`aisle-${item.id}`)
-
-    const result = await updateItemAisle(item.id, item.aisle_number)
-
-    if (result.success && result.item) {
-      setItems(prev => prev.map(i =>
-        i.id === item.id ? result.item : i
-      ))
-      setSavedAisles(prev => new Map(prev).set(item.id, result.item.aisle_number))
-    }
-
-    setLoading(null)
-  }
-
-  const stapleCount = items.filter(item => item.is_staple).length
-
   return (
     <Stack gap="xl">
+      {/* Edit Item Modal */}
+      <Modal
+        opened={!!editingItem}
+        onClose={closeEditModal}
+        title={`Edit: ${editingItem?.name}`}
+        centered
+        size="sm"
+      >
+        <Stack gap="md">
+          <TextInput
+            label="Item Name"
+            value={editName}
+            onChange={(e) => setEditName(e.target.value)}
+            required
+          />
+          <TextInput
+            label="Aisle Number"
+            placeholder="—"
+            value={editAisle}
+            onChange={(e) => {
+              const val = e.target.value.replace(/\D/g, '')
+              setEditAisle(val === '' ? '' : Number(val))
+            }}
+          />
+          <Checkbox
+            label="Staple Item"
+            checked={editIsStaple}
+            onChange={(e) => setEditIsStaple(e.currentTarget.checked)}
+          />
+          <TextInput
+            label="Default Amount"
+            placeholder="e.g. 1 gallon"
+            value={editAmount}
+            onChange={(e) => setEditAmount(e.target.value)}
+            disabled={!editIsStaple}
+          />
+          <Group justify="flex-end" gap="sm">
+            <Button variant="subtle" onClick={closeEditModal}>Cancel</Button>
+            <Button onClick={handleSaveItem} loading={saving} disabled={!editName.trim()}>
+              Save
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
       {/* Create New Item */}
       <Card>
         <Text fw={500} mb="md">Add New Item</Text>
@@ -207,6 +203,7 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
               placeholder="Enter item name"
               value={newItemName}
               onChange={(e) => setNewItemName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleCreateItem()}
               style={{ flex: 2 }}
             />
             <TextInput
@@ -218,7 +215,7 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
               disabled={!newItemIsStaple}
             />
             <Checkbox
-              label = "Make Staple"
+              label="Make Staple"
               checked={newItemIsStaple}
               onChange={(e) => setNewItemIsStaple(e.currentTarget.checked)}
               mb="8"
@@ -248,7 +245,7 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
               disabled={!newItemIsStaple}
             />
             <Checkbox
-              label = "Make Staple"
+              label="Make Staple"
               checked={newItemIsStaple}
               onChange={(e) => setNewItemIsStaple(e.currentTarget.checked)}
             />
@@ -276,9 +273,7 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
           ]}
         />
         <Group gap="xs">
-          <Text size="sm" c="dimmed">
-            Sort by
-          </Text>
+          <Text size="sm" c="dimmed">Sort by</Text>
           <SegmentedControl
             value={sortMode}
             onChange={(value) => setSortMode(value as 'name' | 'aisle')}
@@ -297,94 +292,47 @@ export function ItemsManager({ items: initialItems }: ItemsManagerProps) {
       )}
 
       {/* Items Table */}
-      <Table>
-        <thead>
-          <tr>
-            <th style={{ width: '35%' }}>Name</th>
-            <th style={{ width: '25%', }}>Default Amount</th>
-            <th style={{ width: '15%' }}>Aisle</th>
-            <th style={{ width: '10%', }}>Staple</th>
-            <th style={{ width: '15%', }}>Actions</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table highlightOnHover>
+        <Table.Thead>
+          <Table.Tr>
+            <Table.Th style={{ width: '40%' }}>Name</Table.Th>
+            <Table.Th style={{ width: '25%' }}>Default Amount</Table.Th>
+            <Table.Th style={{ width: '15%', textAlign: 'center' }}>Aisle</Table.Th>
+            <Table.Th style={{ width: '10%', textAlign: 'center' }}>Staple</Table.Th>
+          </Table.Tr>
+        </Table.Thead>
+        <Table.Tbody>
           {filteredItems.map((item) => (
-            <tr key={item.id}>
-              <td>
-                <Text fw={item.is_staple ? 500 : 400}>
-                  {item.name}
+            <Table.Tr
+              key={item.id}
+              onClick={() => openEditModal(item)}
+              style={{ cursor: 'pointer' }}
+            >
+              <Table.Td>
+                <Text fw={item.is_staple ? 500 : 400}>{item.name}</Text>
+              </Table.Td>
+              <Table.Td>
+                <Text c={item.staple_amount ? undefined : 'dimmed'}>
+                  {item.staple_amount || (item.is_staple ? 'No default amount' : '—')}
                 </Text>
-              </td>
-              <td style={{ textAlign: "center"}}>
-                {editingId === item.id ? (
-                  <TextInput
-                    value={editAmount}
-                    onChange={(e) => setEditAmount(e.target.value)}
-                    placeholder="Enter amount"
-                    size="sm"
-                  />
-                ) : (
-                  <Text c={item.staple_amount ? undefined : 'dimmed'}>
-                    {item.staple_amount || (item.is_staple ? 'No default amount' : '—')}
-                  </Text>
-                )}
-              </td>
-              <td>
-                <TextInput
-                  aria-label={`Aisle number for ${item.name}`}
-                  placeholder="—"
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  value={item.aisle_number?.toString() ?? ''}
-                  onChange={(event) => handleAisleChange(item.id, event.currentTarget.value)}
-                  onBlur={() => handleSaveAisle(item)}
-                  disabled={loading === `aisle-${item.id}`}
-                  size="sm"
-                  styles={{ input: { textAlign: 'center' } }}
-                />
-              </td>
-              <td>
+              </Table.Td>
+              <Table.Td style={{ textAlign: 'center' }}>
+                <Text c={item.aisle_number ? undefined : 'dimmed'}>
+                  {item.aisle_number ?? '—'}
+                </Text>
+              </Table.Td>
+              <Table.Td style={{ textAlign: 'center' }}>
                 <Group justify="center">
-                  <Checkbox
+                          <Checkbox
                     checked={item.is_staple}
-                    onChange={() => handleStapleToggle(item)}
-                    disabled={loading === item.id}
+                    readOnly
+                    onClick={(e) => e.stopPropagation()}
                   />
                 </Group>
-              </td>
-              <td style={{ textAlign: 'center' }}>
-                {item.is_staple && (
-                  editingId === item.id ? (
-                    <Group gap="xs" justify="center">
-                      <ActionIcon
-                        color="green"
-                        variant="subtle"
-                        onClick={() => handleSaveAmount(item)}
-                        loading={loading === item.id}
-                      >
-                        <IconCheck size={16} />
-                      </ActionIcon>
-                      <ActionIcon
-                        color="gray"
-                        variant="subtle"
-                        onClick={handleCancelEdit}
-                      >
-                        <IconX size={16} />
-                      </ActionIcon>
-                    </Group>
-                  ) : (
-                    <ActionIcon
-                      variant="subtle"
-                      onClick={() => handleEditAmount(item)}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                  )
-                )}
-              </td>
-            </tr>
+              </Table.Td>
+            </Table.Tr>
           ))}
-        </tbody>
+        </Table.Tbody>
       </Table>
     </Stack>
   )
